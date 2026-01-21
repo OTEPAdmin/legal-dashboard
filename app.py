@@ -7,16 +7,17 @@ import os
 # --- 1. CONFIGURATION & STYLE ---
 st.set_page_config(page_title="EIS Platform", layout="wide", page_icon="🏛️")
 
-# Injecting Sarabun Font and RESPONSIVE CSS
+# Injecting Kanit Font and RESPONSIVE CSS
 st.markdown("""
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
+   <style>
+        /* 1. เปลี่ยน Link นำเข้าฟอนต์เป็น Kanit */
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;700&display=swap');
 
-        /* Global Font Force */
-        html, body, [class*="css"], .stMarkdown, .stButton, .stTextField, .stNumberInput, .stSelectbox, .stMetric {
-            font-family: 'Sarabun', sans-serif !important;
+        /* 2. บังคับใช้ฟอนต์ Kanit กับทุกส่วนของเว็บ */
+        html, body, [class*="css"], .stMarkdown, .stButton, .stTextField, .stNumberInput, .stSelectbox, .stMetric, h1, h2, h3, h4, h5, h6 {
+            font-family: 'Kanit', sans-serif !important;
         }
-        
+                
         /* --- RESPONSIVE LOGIN BOX --- */
         .login-box {
             background-color: white;
@@ -202,14 +203,14 @@ def show_eis_dashboard():
         with c_sub1:
             st.caption("📈 สมาชิกเพิ่ม ช.พ.ค.")
             fig = px.bar(x=[10587, 1869], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
-            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
+            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
         with c_sub2:
             st.caption("📉 จำหน่าย ช.พ.ค.")
             fig = px.bar(x=[2242, 1345, 4500, 448], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h', 
                          color_discrete_sequence=['#FBC02D', '#AB47BC', '#E91E63', '#BDBDBD'])
             fig.update_traces(marker_color=['#FBC02D', '#AB47BC', '#E91E63', '#BDBDBD'])
-            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
+            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
 
     # Card 2: Ch.P.S.
@@ -229,13 +230,13 @@ def show_eis_dashboard():
         with c_sub3:
             st.caption("📈 สมาชิกเพิ่ม ช.พ.ส.")
             fig = px.bar(x=[3626, 906], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
-            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
+            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
         with c_sub4:
             st.caption("📉 จำหน่าย ช.พ.ส.")
             fig = px.bar(x=[1047, 628, 3245, 314], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h')
             fig.update_traces(marker_color=['#FBC02D', '#00BCD4', '#E91E63', '#BDBDBD'])
-            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
+            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
 
     # --- ROW 2: DEMOGRAPHICS ---
@@ -245,22 +246,22 @@ def show_eis_dashboard():
     with d1:
         st.caption("สัดส่วนเพศ ช.พ.ค.")
         fig = px.pie(values=[38, 62], names=["ชาย", "หญิง"], hole=0.6, color_discrete_sequence=['#03A9F4', '#E91E63'])
-        fig.update_layout(height=200, margin=dict(l=10,r=10,t=0,b=20), showlegend=True, legend=dict(orientation="h"), font_family="Sarabun")
+        fig.update_layout(height=200, margin=dict(l=10,r=10,t=0,b=20), showlegend=True, legend=dict(orientation="h"), font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
     with d2:
         st.caption("กลุ่มอายุ ช.พ.ค.")
         fig = px.bar(x=["<40", "40-49", "50-59", "60-69", "≥70"], y=[8, 18, 32, 28, 14], color_discrete_sequence=['#FFCA28'])
-        fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, font_family="Sarabun")
+        fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
     with d3:
         st.caption("สัดส่วนเพศ ช.พ.ส.")
         fig = px.pie(values=[42, 58], names=["ชาย", "หญิง"], hole=0.6, color_discrete_sequence=['#03A9F4', '#E91E63'])
-        fig.update_layout(height=200, margin=dict(l=10,r=10,t=0,b=20), showlegend=True, legend=dict(orientation="h"), font_family="Sarabun")
+        fig.update_layout(height=200, margin=dict(l=10,r=10,t=0,b=20), showlegend=True, legend=dict(orientation="h"), font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
     with d4:
         st.caption("กลุ่มอายุ ช.พ.ส.")
         fig = px.bar(x=["<40", "40-49", "50-59", "60-69", "≥70"], y=[5, 12, 25, 35, 23], color_discrete_sequence=['#AB47BC'])
-        fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, font_family="Sarabun")
+        fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
 
     # --- ROW 3: CAUSES OF DEATH ---
@@ -272,19 +273,19 @@ def show_eis_dashboard():
         st.caption("5 อันดับสาเหตุการเสียชีวิต ช.พ.ค.")
         fig = px.bar(x=[198, 125, 90, 70, 65], y=death_causes, orientation='h', 
                      color=death_causes, color_discrete_sequence=px.colors.qualitative.Bold)
-        fig.update_layout(height=250, showlegend=False, yaxis={'categoryorder':'total ascending'}, font_family="Sarabun")
+        fig.update_layout(height=250, showlegend=False, yaxis={'categoryorder':'total ascending'}, font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
     with cd2:
         st.caption("5 อันดับสาเหตุการเสียชีวิต ช.พ.ส.")
         fig = px.bar(x=[45, 32, 38, 28, 22], y=death_causes, orientation='h',
                      color=death_causes, color_discrete_sequence=px.colors.qualitative.Bold)
-        fig.update_layout(height=250, showlegend=False, yaxis={'categoryorder':'total ascending'}, font_family="Sarabun")
+        fig.update_layout(height=250, showlegend=False, yaxis={'categoryorder':'total ascending'}, font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
 
     # --- ROW 4: FINANCE ---
     st.markdown("""
         <div style="background-color: #E3F2FD; padding: 10px; border-left: 5px solid #2196F3; margin: 20px 0; border-radius: 0 5px 5px 0;">
-            <h3 style="margin:0; font-family:'Sarabun', sans-serif;">💳 การนำส่งเงิน & งบการเงิน</h3>
+            <h3 style="margin:0; font-family:'Kanit', sans-serif;">💳 การนำส่งเงิน & งบการเงิน</h3>
         </div>
     """, unsafe_allow_html=True)
 
@@ -308,7 +309,7 @@ def show_eis_dashboard():
         df_trend = pd.DataFrame({'งวด': [f'งวด {i}' for i in range(1,11)], 'อัตรา': [87.5, 87.8, 89.5, 89.1, 90, 90.5, 90.2, 90.8, 90.5, 90.9]})
         fig = px.line(df_trend, x='งวด', y='อัตรา', markers=True, title="แนวโน้มอัตราการชำระ ช.พ.ค.")
         fig.update_traces(line_color='#00ACC1', fill='tozeroy')
-        fig.update_layout(height=250, margin=dict(t=30), font_family="Sarabun")
+        fig.update_layout(height=250, margin=dict(t=30), font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
 
     # [cite_start]Finance Ch.P.S. [cite: 152-178]
@@ -329,7 +330,7 @@ def show_eis_dashboard():
         df_trend2 = pd.DataFrame({'งวด': [f'งวด {i}' for i in range(1,11)], 'อัตรา': [88.2, 89.3, 92.8, 94.2, 94, 90.8, 89.5, 93.5, 92.1, 92.8]})
         fig = px.line(df_trend2, x='งวด', y='อัตรา', markers=True, title="แนวโน้มอัตราการชำระ ช.พ.ส.")
         fig.update_traces(line_color='#8E24AA', fill='tozeroy')
-        fig.update_layout(height=250, margin=dict(t=30), font_family="Sarabun")
+        fig.update_layout(height=250, margin=dict(t=30), font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
 
 # --- 5. PAGE: REVENUE DASHBOARD (NEW) ---
@@ -416,7 +417,7 @@ def show_revenue_dashboard():
         })
         fig = px.bar(df_age, x="Age Group", y="Count", color="Age Group", 
                      color_discrete_sequence=['#00BCD4', '#66BB6A', '#9C27B0', '#FFC107', '#E91E63'])
-        fig.update_layout(font_family="Sarabun", height=350, showlegend=False)
+        fig.update_layout(font_family="Kanit", height=350, showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
 
 # --- 6. PAGE: LEGAL DASHBOARD ---
@@ -444,15 +445,15 @@ def show_legal_dashboard():
         })
         fig = px.bar(df_work, y="กลุ่ม", x=["Pending", "Done"], orientation='h', barmode='stack', 
                      color_discrete_map={"Pending": "#00BCD4", "Done": "#66BB6A"})
-        fig.update_layout(font_family="Sarabun")
+        fig.update_layout(font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
     
     with lc2:
         st.subheader("สถานะรวม")
         fig = px.pie(values=[28, 17], names=["Pending", "Done"], hole=0.6, 
                      color_discrete_sequence=["#00BCD4", "#66BB6A"])
-        fig.add_annotation(text="37.8%", showarrow=False, font_size=20, font=dict(family="Sarabun"))
-        fig.update_layout(font_family="Sarabun")
+        fig.add_annotation(text="37.8%", showarrow=False, font_size=20, font=dict(family="Kanit"))
+        fig.update_layout(font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
     
     # Table
@@ -521,3 +522,4 @@ else:
         show_legal_dashboard()
     elif "Admin Panel" in selection:
         show_admin_panel()
+
