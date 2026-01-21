@@ -3,169 +3,155 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# --- 1. CONFIG & SETTINGS ---
-st.set_page_config(page_title="EIS Executive Platform", layout="wide")
+# --- 1. CONFIG & STYLE ---
+st.set_page_config(page_title="Legal & EIS Platform", layout="wide")
 
-# --- 2. THEME & CUSTOM CSS ---
 st.markdown("""
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         html, body, [class*="css"] { font-family: 'Sarabun', sans-serif !important; }
-        .executive-header { background-color: #f1f3f4; padding: 10px 20px; border-radius: 5px; margin-bottom: 20px; border-left: 8px solid #5f6368; }
-        .sub-header { background-color: #f8f9fa; padding: 5px 15px; border-radius: 5px; margin: 15px 0; border-left: 5px solid #5f6368; font-weight: bold; border-bottom: 1px solid #dee2e6; }
-        .kpi-card { background-color: white; padding: 15px; border-radius: 10px; border: 1px solid #e0e0e0; text-align: center; height: 100%; }
-        .finance-card { padding: 15px; border-radius: 8px; color: white; text-align: center; min-height: 100px; display: flex; flex-direction: column; justify-content: center; }
-        .metric-sub { font-size: 12px; color: #666; }
+        .executive-header { background-color: #f1f3f4; padding: 15px; border-radius: 5px; border-left: 8px solid #5f6368; margin-bottom: 20px; }
+        .kpi-card { background-color: white; padding: 20px; border-radius: 10px; border: 1px solid #e0e0e0; text-align: center; }
+        .finance-card { padding: 15px; border-radius: 10px; color: white; text-align: center; font-weight: bold; }
+        .login-box { max-width: 400px; margin: auto; padding: 2rem; background: #f8f9fa; border-radius: 15px; border: 1px solid #dee2e6; }
+        .sub-section { background-color: #e8f0fe; padding: 8px 15px; border-radius: 5px; border-left: 5px solid #1a73e8; font-weight: bold; margin: 20px 0 10px 0; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SESSION STATE FOR LOGIN ---
+# --- 2. SESSION STATE ---
 if "logged_in" not in st.session_state:
-    st.session_state.logged_in = True  # ตั้งเป็น True เพื่อความสะดวกในการทดสอบ
-    st.session_state.role = "Admin"
-    st.session_state.name = "ผู้ดูแลระบบ"
+    st.session_state.logged_in = False
+    st.session_state.role = None
+    st.session_state.name = ""
 
-# --- 4. PAGE: EIS DASHBOARD (COMPLETE VERSION) ---
+# --- 3. LOGIN PAGE ---
+def login_page():
+    st.write("<br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1.5, 1])
+    with col2:
+        st.markdown('<div class="login-box">', unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center;'>🏛️ EIS Platform Login</h2>", unsafe_allow_html=True)
+        user = st.text_input("Username")
+        pw = st.text_input("Password", type="password")
+        if st.button("เข้าสู่ระบบ", use_container_width=True):
+            if user == "admin" and pw == "admin123":
+                st.session_state.logged_in, st.session_state.role, st.session_state.name = True, "Admin", "ผู้ดูแลระบบ"
+                st.rerun()
+            elif user == "user" and pw == "user123":
+                st.session_state.logged_in, st.session_state.role, st.session_state.name = True, "User", "เจ้าหน้าที่"
+                st.rerun()
+            else:
+                st.error("Username หรือ Password ไม่ถูกต้อง")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# --- 4. PAGE: EIS DASHBOARD (Member Stats + Finance) ---
 def show_eis_dashboard():
-    # --- Filter Section ---
     st.markdown('<div class="executive-header"><h2>📊 บทสรุปผู้บริหาร (Executive Summary)</h2></div>', unsafe_allow_html=True)
     
+    # Filter Section
     with st.container():
-        f1, f2, f3, f4 = st.columns(4)
-        f1.selectbox("ช่วงเวลา", ["กุมภาพันธ์", "มกราคม"], index=0)
+        f1, f2, f3, f4 = st.columns([1.5, 1, 1.5, 1])
+        f1.selectbox("ช่วงเวลา", ["พฤศจิกายน", "ธันวาคม"], index=0)
         f2.selectbox("ปี", ["2568", "2567"], index=0)
-        f3.selectbox("ถึง", ["กุมภาพันธ์"], index=0)
-        f4.selectbox("ปี", ["2568"], index=0)
-
-    # --- SECTION 1: ภาพรวมสมาชิก (image_10ab00.png) ---
-    st.markdown('<div class="sub-header">👥 ภาพรวมสมาชิก ช.พ.ค. และ ช.พ.ส.</div>', unsafe_allow_html=True)
     
-    col_mem1, col_mem2 = st.columns(2)
-    with col_mem1:
-        st.markdown("""
-            <div class="kpi-card" style="border-top: 5px solid #0097a7;">
-                <p style="text-align:left; color:#5f6368; font-weight:bold;">👥 ภาพรวมสมาชิก ช.พ.ค. <span style="float:right; font-weight:normal;">ปี 2568</span></p>
-                <div style="display:flex; justify-content:space-around; align-items:center;">
-                    <div><h2 style="color:#0097a7; margin:0;">933,962</h2><p class="metric-sub">จำนวนสมาชิก</p></div>
-                    <div><h2 style="color:#43a047; margin:0;">12,456</h2><p class="metric-sub">สมาชิกเพิ่ม</p></div>
-                    <div><h2 style="color:#e91e63; margin:0;">8,967</h2><p class="metric-sub">จำหน่าย</p></div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        c1, c2 = st.columns(2)
-        with c1:
-            st.caption("📈 สมาชิกเพิ่ม ช.พ.ค.")
-            fig1 = px.bar(x=[10587, 1869], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#6ECB93'])
-            fig1.update_layout(height=150, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, yaxis_title=None)
-            st.plotly_chart(fig1, use_container_width=True)
-        with c2:
-            st.caption("📉 จำหน่าย ช.พ.ค.")
-            fig2 = px.bar(x=[2242, 1345, 4500, 448], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h', color_discrete_sequence=['#E91E63'])
-            fig2.update_layout(height=150, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, yaxis_title=None)
-            st.plotly_chart(fig2, use_container_width=True)
-
-    with col_mem2:
-        st.markdown("""
-            <div class="kpi-card" style="border-top: 5px solid #8e24aa;">
-                <p style="text-align:left; color:#5f6368; font-weight:bold;">👥 ภาพรวมสมาชิก ช.พ.ส. <span style="float:right; font-weight:normal;">ปี 2568</span></p>
-                <div style="display:flex; justify-content:space-around; align-items:center;">
-                    <div><h2 style="color:#8e24aa; margin:0;">287,654</h2><p class="metric-sub">จำนวนสมาชิก</p></div>
-                    <div><h2 style="color:#43a047; margin:0;">4,532</h2><p class="metric-sub">สมาชิกเพิ่ม</p></div>
-                    <div><h2 style="color:#e91e63; margin:0;">5,234</h2><p class="metric-sub">จำหน่าย</p></div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        c1, c2 = st.columns(2)
-        with c1:
-            st.caption("📈 สมาชิกเพิ่ม ช.พ.ส.")
-            fig3 = px.bar(x=[3626, 906], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#6ECB93'])
-            fig3.update_layout(height=150, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, yaxis_title=None)
-            st.plotly_chart(fig3, use_container_width=True)
-        with c2:
-            st.caption("📉 จำหน่าย ช.พ.ส.")
-            fig4 = px.bar(x=[1047, 628, 3245, 314], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h', color_discrete_sequence=['#E91E63'])
-            fig4.update_layout(height=150, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, yaxis_title=None)
-            st.plotly_chart(fig4, use_container_width=True)
-
-    # --- SECTION 2: DEMOGRAPHIC & DEATH CAUSES (image_10ab00.png) ---
-    st.write("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">👥 ข้อมูลสมาชิก | DEMOGRAPHIC</div>', unsafe_allow_html=True)
-    d1, d2, d3, d4 = st.columns(4)
-    with d1:
-        st.caption("สัดส่วนเพศ ช.พ.ค.")
-        fig_p1 = px.pie(values=[38, 62], names=["ชาย 38%", "หญิง 62%"], hole=0.7, color_discrete_sequence=['#03A9F4', '#E91E63'])
-        fig_p1.update_layout(height=220, margin=dict(t=0,b=0,l=0,r=0), showlegend=True, legend=dict(orientation="h", y=-0.1))
-        st.plotly_chart(fig_p1, use_container_width=True)
-    with d2:
-        st.caption("กลุ่มอายุ ช.พ.ค.")
-        fig_a1 = px.bar(x=["<40", "40-49", "50-59", "60-69", ">70"], y=[8, 12, 25, 32, 22], color_discrete_sequence=['#FFC107'])
-        fig_a1.update_layout(height=220, margin=dict(t=10,b=0,l=0,r=0), xaxis_title=None, yaxis_title=None)
-        st.plotly_chart(fig_a1, use_container_width=True)
-    with d3:
-        st.caption("สัดส่วนเพศ ช.พ.ส.")
-        fig_p2 = px.pie(values=[42, 58], names=["ชาย 42%", "หญิง 58%"], hole=0.7, color_discrete_sequence=['#03A9F4', '#E91E63'])
-        fig_p2.update_layout(height=220, margin=dict(t=0,b=0,l=0,r=0), showlegend=True, legend=dict(orientation="h", y=-0.1))
-        st.plotly_chart(fig_p2, use_container_width=True)
-    with d4:
-        st.caption("กลุ่มอายุ ช.พ.ส.")
-        fig_a2 = px.bar(x=["<40", "40-49", "50-59", "60-69", ">70"], y=[5, 10, 25, 35, 25], color_discrete_sequence=['#9C27B0'])
-        fig_a2.update_layout(height=220, margin=dict(t=10,b=0,l=0,r=0), xaxis_title=None, yaxis_title=None)
-        st.plotly_chart(fig_a2, use_container_width=True)
-
-    # --- SECTION 3: การนำส่งเงิน & งบการเงิน (image_10c166.png) ---
-    st.write("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">💳 การนำส่งเงิน & งบการเงิน (ประจำงวด พฤศจิกายน 2568)</div>', unsafe_allow_html=True)
+    # --- PART 1: MEMBER STATISTICS ---
+    st.markdown('<div class="sub-section">👥 ข้อมูลสมาชิก | DEMOGRAPHIC</div>', unsafe_allow_html=True)
     
-    col_fin1, col_fin2 = st.columns(2)
-    with col_fin1:
-        st.markdown('<p style="font-weight:bold; color:#5f6368;">💰 เงินสงเคราะห์ ช.พ.ค.</p>', unsafe_allow_html=True)
-        c1, c2, c3 = st.columns(3)
-        c1.markdown('<div class="finance-card" style="background-color:#0097a7;"><h3>879 ราย</h3><p>จำนวนผู้ตาย</p></div>', unsafe_allow_html=True)
-        c2.markdown('<div class="finance-card" style="background-color:#43a047;"><h3>879.-</h3><p>เงินสงเคราะห์รายศพ</p></div>', unsafe_allow_html=True)
-        c3.markdown('<div class="finance-card" style="background-color:#fbc02d; color:black;"><h3>900,000.-</h3><p>เงินครอบครัว</p></div>', unsafe_allow_html=True)
-        
-        st.write("**สถานะการนำส่งเงิน ช.พ.ค.**")
-        sc1, sc2, sc3 = st.columns(3)
-        sc1.metric("นำส่งภายในกำหนด", "90.64%", "834,394 ราย")
-        sc2.metric("ค้างชำระ", "9.36%", "84,478 ราย")
-        sc3.metric("จังหวัดส่งครบ", "66/77", "จังหวัด")
+    kpi_col1, kpi_col2 = st.columns(2)
+    with kpi_col1:
+        st.markdown('<div class="kpi-card" style="border-top: 5px solid #00acc1;"><h4>ช.พ.ค.</h4><h2>933,962</h2><p style="color:green;">+12,456 เพิ่ม | <span style="color:red;">-8,967 จำหน่าย</span></p></div>', unsafe_allow_html=True)
+    with kpi_col2:
+        st.markdown('<div class="kpi-card" style="border-top: 5px solid #e91e63;"><h4>ช.พ.ส.</h4><h2>287,654</h2><p style="color:green;">+4,532 เพิ่ม | <span style="color:red;">-5,234 จำหน่าย</span></p></div>', unsafe_allow_html=True)
 
-    with col_fin2:
-        st.markdown('<p style="font-weight:bold; color:#5f6368;">💰 เงินสงเคราะห์ ช.พ.ส.</p>', unsafe_allow_html=True)
-        c1, c2, c3 = st.columns(3)
-        c1.markdown('<div class="finance-card" style="background-color:#0097a7;"><h3>383 ราย</h3><p>จำนวนผู้ตาย</p></div>', unsafe_allow_html=True)
-        c2.markdown('<div class="finance-card" style="background-color:#43a047;"><h3>383.-</h3><p>เงินสงเคราะห์รายศพ</p></div>', unsafe_allow_html=True)
-        c3.markdown('<div class="finance-card" style="background-color:#fbc02d; color:black;"><h3>368,311.-</h3><p>เงินครอบครัว</p></div>', unsafe_allow_html=True)
-        
-        st.write("**สถานะการนำส่งเงิน ช.พ.ส.**")
-        sc1, sc2, sc3 = st.columns(3)
-        sc1.metric("นำส่งภายในกำหนด", "91.25%", "357,178 ราย")
-        sc2.metric("ค้างชำระ", "8.75%", "35,565 ราย")
-        sc3.metric("จังหวัดส่งครบ", "71/77", "จังหวัด")
+    # Demographic Charts
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.plotly_chart(px.pie(values=[38, 62], names=["ชาย", "หญิง"], hole=0.7, title="เพศ ช.พ.ค.").update_layout(height=250, showlegend=False), use_container_width=True)
+    with c2:
+        st.plotly_chart(px.bar(x=["<40", "40-59", "60-69", ">70"], y=[10, 35, 30, 25], title="อายุ ช.พ.ค.").update_layout(height=250), use_container_width=True)
+    with c3:
+        st.plotly_chart(px.pie(values=[42, 58], names=["ชาย", "หญิง"], hole=0.7, title="เพศ ช.พ.ส.").update_layout(height=250, showlegend=False), use_container_width=True)
+    with c4:
+        st.plotly_chart(px.bar(x=["<40", "40-59", "60-69", ">70"], y=[8, 28, 40, 24], title="อายุ ช.พ.ส.").update_layout(height=250), use_container_width=True)
 
-    # --- SECTION 4: LINE CHARTS (image_10c166.png) ---
+    # --- PART 2: FINANCE ---
+    st.markdown('<div class="sub-section">💰 การนำส่งเงิน & งบการเงิน</div>', unsafe_allow_html=True)
+    
+    fin_col1, fin_col2 = st.columns(2)
+    with fin_col1:
+        st.write("**💰 เงินสงเคราะห์ ช.พ.ค.**")
+        fc1, fc2, fc3 = st.columns(3)
+        fc1.markdown('<div class="finance-card" style="background-color:#0097a7;">879 ราย<br><small>จำนวนผู้ตาย</small></div>', unsafe_allow_html=True)
+        fc2.markdown('<div class="finance-card" style="background-color:#43a047;">879.-<br><small>รายศพ</small></div>', unsafe_allow_html=True)
+        fc3.markdown('<div class="finance-card" style="background-color:#fbc02d; color:black;">900,000.-<br><small>ครอบครัว</small></div>', unsafe_allow_html=True)
+        st.metric("นำส่งภายในกำหนด", "90.64%", "834,394 ราย")
+    
+    with fin_col2:
+        st.write("**💰 เงินสงเคราะห์ ช.พ.ส.**")
+        fc1, fc2, fc3 = st.columns(3)
+        fc1.markdown('<div class="finance-card" style="background-color:#0097a7;">383 ราย<br><small>จำนวนผู้ตาย</small></div>', unsafe_allow_html=True)
+        fc2.markdown('<div class="finance-card" style="background-color:#43a047;">383.-<br><small>รายศพ</small></div>', unsafe_allow_html=True)
+        fc3.markdown('<div class="finance-card" style="background-color:#fbc02d; color:black;">368,311.-<br><small>ครอบครัว</small></div>', unsafe_allow_html=True)
+        st.metric("นำส่งภายในกำหนด", "91.25%", "357,178 ราย")
+
+    # Payment Trend Charts
     st.write("<br>", unsafe_allow_html=True)
-    cg1, cg2 = st.columns(2)
+    g1, g2 = st.columns(2)
     months = [f"งวด {i}" for i in range(1, 11)]
-    
-    with cg1:
-        st.caption("📈 แนวโน้มอัตราการชำระ ช.พ.ค. ปี 2568")
-        fig_l1 = px.line(x=months, y=[87.5, 87.8, 89.5, 89.1, 90, 90.5, 90.2, 90.8, 90.5, 90.9], markers=True)
-        fig_l1.update_traces(line_color='#0097a7', fill='tozeroy')
-        fig_l1.update_layout(height=280, font_family="Sarabun", xaxis_title=None, yaxis_title="อัตราการชำระ (%)")
-        st.plotly_chart(fig_l1, use_container_width=True)
-        
-    with cg2:
-        st.caption("📈 แนวโน้มอัตราการชำระ ช.พ.ส. ปี 2568")
-        fig_l2 = px.line(x=months, y=[88.2, 89.3, 92.8, 94.2, 94, 90.8, 89.5, 93.5, 92.1, 92.8], markers=True)
-        fig_l2.update_traces(line_color='#8e24aa', fill='tozeroy')
-        fig_l2.update_layout(height=280, font_family="Sarabun", xaxis_title=None, yaxis_title="อัตราการชำระ (%)")
-        st.plotly_chart(fig_l2, use_container_width=True)
+    with g1:
+        fig1 = px.line(x=months, y=[87, 88, 89, 89, 90, 91, 91, 92, 91, 92], title="แนวโน้มการชำระ ช.พ.ค.").update_layout(height=280)
+        st.plotly_chart(fig1, use_container_width=True)
+    with g2:
+        fig2 = px.line(x=months, y=[88, 89, 93, 94, 94, 91, 90, 93, 92, 93], title="แนวโน้มการชำระ ช.พ.ส.").update_layout(height=280)
+        st.plotly_chart(fig2, use_container_width=True)
 
-# --- 5. MAIN EXECUTION ---
-if st.session_state.logged_in:
-    show_eis_dashboard()
+# --- 5. PAGE: LEGAL DASHBOARD ---
+def show_legal_dashboard():
+    st.title("⚖️ Dashboard นิติการ")
+    
+    # KPI
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("ทั้งหมด", "45 เรื่อง")
+    k2.metric("อยู่ระหว่างดำเนินการ", "28 เรื่อง")
+    k3.metric("เสร็จสิ้น", "17 เรื่อง")
+    k4.metric("มูลค่าความเสียหาย", "1.25 ล้านบาท")
+
+    # Charts
+    st.write("<br>", unsafe_allow_html=True)
+    c_l, c_r = st.columns([2, 1])
+    with c_l:
+        st.write("**ภาระงานตามกลุ่ม**")
+        fig = px.bar(x=[9, 5, 6, 2, 6], y=["สืบสวน", "อุทธรณ์", "ร้องเรียน", "ละเมิด", "คดี"], orientation='h', barmode='stack')
+        st.plotly_chart(fig, use_container_width=True)
+    with c_r:
+        st.write("**อัตราเสร็จสิ้น**")
+        fig_pie = px.pie(values=[37.8, 62.2], names=["เสร็จสิ้น", "ค้าง"], hole=0.6)
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+# --- 6. MAIN LOGIC & NAVIGATION ---
+if not st.session_state.logged_in:
+    login_page()
 else:
-    st.warning("Please login to access the EIS Dashboard")
+    # Sidebar Profile
+    st.sidebar.markdown(f"### 👤 {st.session_state.name}")
+    st.sidebar.caption(f"สิทธิ์การใช้งาน: {st.session_state.role}")
+    if st.sidebar.button("Logout"):
+        st.session_state.logged_in = False
+        st.rerun()
+    
+    st.sidebar.divider()
+    
+    # NAVIGATION BASED ON PRIVILEGE
+    menu = ["EIS Dashboard", "Legal Dashboard"]
+    if st.session_state.role == "Admin":
+        menu.append("Admin Control Panel")
+    
+    choice = st.sidebar.radio("เลือกแดชบอร์ด:", menu)
+
+    if choice == "EIS Dashboard":
+        show_eis_dashboard()
+    elif choice == "Legal Dashboard":
+        show_legal_dashboard()
+    else:
+        st.title("⚙️ Admin Control Panel")
+        st.write("เฉพาะผู้ดูแลระบบเท่านั้นที่เข้าถึงหน้านี้ได้")
