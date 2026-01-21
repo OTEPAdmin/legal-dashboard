@@ -2,6 +2,27 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import streamlit as st
+
+# --- ตั้งค่า Font ภาษาไทย (Sarabun) ---
+st.markdown("""
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <style>
+    /* เปลี่ยน Font ทั้งหน้าเว็บ */
+    html, body, [class*="css"], .st-emotion-cache-10trblm {
+        font-family: 'Sarabun', sans-serif !important;
+    }
+    
+    /* ปรับขนาดหัวข้อให้ชัดเจนขึ้น */
+    h1, h2, h3 {
+        font-family: 'Sarabun', sans-serif !important;
+        font-weight: 700 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Legal Affairs Dashboard", layout="wide")
