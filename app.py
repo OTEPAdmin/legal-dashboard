@@ -6,24 +6,28 @@ import plotly.graph_objects as go
 # --- 1. CONFIGURATION & STYLE ---
 st.set_page_config(page_title="EIS Platform", layout="wide", page_icon="🏛️")
 
-# Injecting Sarabun Font and Custom CSS for specific design themes [cite: 5, 6, 7]
+# Injecting Sarabun Font globally and specific Card Styles
 st.markdown("""
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        html, body, [class*="css"] {
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
+
+        /* Force Sarabun font on EVERYTHING including Streamlit widgets */
+        html, body, [class*="css"], .stMarkdown, .stButton, .stTextField, .stNumberInput, .stSelectbox, .stMetric {
             font-family: 'Sarabun', sans-serif !important;
         }
+        
         /* Login Container */
         .login-box {
             background-color: white;
-            padding: 30px;
+            padding: 40px;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             max-width: 400px;
             margin: 50px auto;
             border-top: 5px solid #E91E63;
         }
-        /* EIS Dashboard: Card Styles */
+
+        /* Dashboard Card Styles */
         .card-cpk {
             background-color: white;
             border-radius: 10px;
@@ -40,21 +44,14 @@ st.markdown("""
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             text-align: center;
         }
-        .finance-header {
-            background-color: #E3F2FD;
-            padding: 10px;
-            border-left: 5px solid #2196F3;
-            margin-bottom: 15px;
-            font-weight: bold;
-            border-radius: 0 5px 5px 0;
-        }
-        /* Custom metric styles */
-        .stat-value { font-size: 28px; font-weight: bold; margin: 0; }
+        
+        /* Metric Styling */
+        .stat-value { font-size: 28px; font-weight: bold; margin: 0; color: #333; }
         .stat-label { color: grey; font-size: 14px; }
         .stat-up { color: #4CAF50; font-weight: bold; font-size: 14px; }
         .stat-down { color: #E91E63; font-weight: bold; font-size: 14px; }
         
-        /* Finance Color Cards */
+        /* Finance Cards */
         .fin-card-blue { background-color: #00BCD4; color: white; padding: 15px; border-radius: 8px; text-align: center; }
         .fin-card-green { background-color: #66BB6A; color: white; padding: 15px; border-radius: 8px; text-align: center; }
         .fin-card-gold { background-color: #FBC02D; color: white; padding: 15px; border-radius: 8px; text-align: center; }
@@ -67,9 +64,9 @@ if "logged_in" not in st.session_state:
     st.session_state.role = None
     st.session_state.username = ""
 
-# --- 3. LOGIN PAGE [cite: 10] ---
+# --- 3. LOGIN PAGE ---
 def login_page():
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         st.markdown('<div class="login-box">', unsafe_allow_html=True)
@@ -79,7 +76,6 @@ def login_page():
         password = st.text_input("Password", type="password")
         
         if st.button("Sign In", use_container_width=True):
-            # Roles definition [cite: 12, 13, 14]
             if username == "admin" and password == "admin123":
                 st.session_state.logged_in = True
                 st.session_state.role = "Admin"
@@ -97,14 +93,13 @@ def login_page():
                 st.rerun()
             else:
                 st.error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-        
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 4. PAGE: EIS DASHBOARD (Executive Summary) [cite: 20] ---
+# --- 4. PAGE: EIS DASHBOARD (Executive Summary) ---
 def show_eis_dashboard():
-    # Header [cite: 21]
+    # Header
     st.markdown("""
-        <div style="background-color: #F5F5F5; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <div style="background-color: #F5F5F5; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 5px solid #607D8B;">
             <h2 style="margin:0; color:#333;">📊 บทสรุปผู้บริหาร (Executive Summary)</h2>
         </div>
     """, unsafe_allow_html=True)
@@ -116,7 +111,7 @@ def show_eis_dashboard():
     
     st.write("---")
 
-    # --- ROW 1: MEMBER OVERVIEW [cite: 22] ---
+    # --- ROW 1: MEMBER OVERVIEW ---
     col_kpi1, col_kpi2 = st.columns(2)
     
     # Card 1: Ch.P.K. (Cyan Theme)
@@ -136,14 +131,16 @@ def show_eis_dashboard():
         with c_sub1:
             st.caption("📈 สมาชิกเพิ่ม ช.พ.ค.")
             fig = px.bar(x=[10587, 1869], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
-            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False)
+            # FIX: Explicitly set font_family to Sarabun
+            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
             st.plotly_chart(fig, use_container_width=True)
         with c_sub2:
             st.caption("📉 จำหน่าย ช.พ.ค.")
             fig = px.bar(x=[2242, 1345, 4500, 448], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h', 
                          color_discrete_sequence=['#FBC02D', '#AB47BC', '#E91E63', '#BDBDBD'])
             fig.update_traces(marker_color=['#FBC02D', '#AB47BC', '#E91E63', '#BDBDBD'])
-            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False)
+            # FIX: Explicitly set font_family to Sarabun
+            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
             st.plotly_chart(fig, use_container_width=True)
 
     # Card 2: Ch.P.S. (Purple Theme)
@@ -163,13 +160,13 @@ def show_eis_dashboard():
         with c_sub3:
             st.caption("📈 สมาชิกเพิ่ม ช.พ.ส.")
             fig = px.bar(x=[3626, 906], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
-            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False)
+            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
             st.plotly_chart(fig, use_container_width=True)
         with c_sub4:
             st.caption("📉 จำหน่าย ช.พ.ส.")
             fig = px.bar(x=[1047, 628, 3245, 314], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h')
             fig.update_traces(marker_color=['#FBC02D', '#00BCD4', '#E91E63', '#BDBDBD'])
-            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False)
+            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
             st.plotly_chart(fig, use_container_width=True)
 
     # --- ROW 2: DEMOGRAPHICS ---
@@ -179,22 +176,22 @@ def show_eis_dashboard():
     with d1:
         st.caption("สัดส่วนเพศ ช.พ.ค.")
         fig = px.pie(values=[38, 62], names=["ชาย", "หญิง"], hole=0.6, color_discrete_sequence=['#03A9F4', '#E91E63'])
-        fig.update_layout(height=200, margin=dict(l=20,r=20,t=0,b=20), showlegend=True, legend=dict(orientation="h"))
+        fig.update_layout(height=200, margin=dict(l=20,r=20,t=0,b=20), showlegend=True, legend=dict(orientation="h"), font_family="Sarabun")
         st.plotly_chart(fig, use_container_width=True)
     with d2:
         st.caption("กลุ่มอายุ ช.พ.ค.")
         fig = px.bar(x=["<40", "40-49", "50-59", "60-69", "≥70"], y=[8, 18, 32, 28, 14], color_discrete_sequence=['#FFCA28'])
-        fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None)
+        fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, font_family="Sarabun")
         st.plotly_chart(fig, use_container_width=True)
     with d3:
         st.caption("สัดส่วนเพศ ช.พ.ส.")
         fig = px.pie(values=[42, 58], names=["ชาย", "หญิง"], hole=0.6, color_discrete_sequence=['#03A9F4', '#E91E63'])
-        fig.update_layout(height=200, margin=dict(l=20,r=20,t=0,b=20), showlegend=True, legend=dict(orientation="h"))
+        fig.update_layout(height=200, margin=dict(l=20,r=20,t=0,b=20), showlegend=True, legend=dict(orientation="h"), font_family="Sarabun")
         st.plotly_chart(fig, use_container_width=True)
     with d4:
         st.caption("กลุ่มอายุ ช.พ.ส.")
         fig = px.bar(x=["<40", "40-49", "50-59", "60-69", "≥70"], y=[5, 12, 25, 35, 23], color_discrete_sequence=['#AB47BC'])
-        fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None)
+        fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, font_family="Sarabun")
         st.plotly_chart(fig, use_container_width=True)
 
     # --- ROW 3: CAUSES OF DEATH ---
@@ -206,17 +203,22 @@ def show_eis_dashboard():
         st.caption("5 อันดับสาเหตุการเสียชีวิต ช.พ.ค.")
         fig = px.bar(x=[198, 125, 90, 70, 65], y=death_causes, orientation='h', 
                      color=death_causes, color_discrete_sequence=px.colors.qualitative.Bold)
-        fig.update_layout(height=250, showlegend=False, yaxis={'categoryorder':'total ascending'})
+        fig.update_layout(height=250, showlegend=False, yaxis={'categoryorder':'total ascending'}, font_family="Sarabun")
         st.plotly_chart(fig, use_container_width=True)
     with cd2:
         st.caption("5 อันดับสาเหตุการเสียชีวิต ช.พ.ส.")
         fig = px.bar(x=[45, 32, 38, 28, 22], y=death_causes, orientation='h',
                      color=death_causes, color_discrete_sequence=px.colors.qualitative.Bold)
-        fig.update_layout(height=250, showlegend=False, yaxis={'categoryorder':'total ascending'})
+        fig.update_layout(height=250, showlegend=False, yaxis={'categoryorder':'total ascending'}, font_family="Sarabun")
         st.plotly_chart(fig, use_container_width=True)
 
     # --- ROW 4: FINANCE ---
-    st.markdown('<div class="finance-header">💳 การนำส่งเงิน & งบการเงิน</div>', unsafe_allow_html=True)
+    st.markdown("""
+        <div style="background-color: #E3F2FD; padding: 10px; border-left: 5px solid #2196F3; margin: 20px 0; border-radius: 0 5px 5px 0;">
+            <h3 style="margin:0; font-family:'Sarabun', sans-serif;">💳 การนำส่งเงิน & งบการเงิน</h3>
+        </div>
+    """, unsafe_allow_html=True)
+
     f1, f2 = st.columns(2)
     
     # Finance Ch.P.K.
@@ -228,7 +230,6 @@ def show_eis_dashboard():
         fc3.markdown('<div class="fin-card-gold" style="color:black"><h5>900K.-</h5><small>ครอบครัว</small></div>', unsafe_allow_html=True)
         
         st.markdown("<br>", unsafe_allow_html=True)
-        # Payment Status
         col_s1, col_s2, col_s3 = st.columns(3)
         col_s1.metric("นำส่งในกำหนด", "90.64%", "834,394 ราย")
         col_s2.metric("ค้างชำระ", "9.36%", "84,478 ราย", delta_color="inverse")
@@ -238,7 +239,7 @@ def show_eis_dashboard():
         df_trend = pd.DataFrame({'งวด': [f'งวด {i}' for i in range(1,11)], 'อัตรา': [87.5, 87.8, 89.5, 89.1, 90, 90.5, 90.2, 90.8, 90.5, 90.9]})
         fig = px.line(df_trend, x='งวด', y='อัตรา', markers=True, title="แนวโน้มอัตราการชำระ ช.พ.ค.")
         fig.update_traces(line_color='#00ACC1', fill='tozeroy')
-        fig.update_layout(height=250, margin=dict(t=30))
+        fig.update_layout(height=250, margin=dict(t=30), font_family="Sarabun")
         st.plotly_chart(fig, use_container_width=True)
 
     # Finance Ch.P.S.
@@ -250,7 +251,6 @@ def show_eis_dashboard():
         fc6.markdown('<div class="fin-card-gold" style="color:black"><h5>368K.-</h5><small>ครอบครัว</small></div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        # Payment Status
         col_s4, col_s5, col_s6 = st.columns(3)
         col_s4.metric("นำส่งในกำหนด", "91.25%", "357,178 ราย")
         col_s5.metric("ค้างชำระ", "8.75%", "35,565 ราย", delta_color="inverse")
@@ -260,12 +260,16 @@ def show_eis_dashboard():
         df_trend2 = pd.DataFrame({'งวด': [f'งวด {i}' for i in range(1,11)], 'อัตรา': [88.2, 89.3, 92.8, 94.2, 94, 90.8, 89.5, 93.5, 92.1, 92.8]})
         fig = px.line(df_trend2, x='งวด', y='อัตรา', markers=True, title="แนวโน้มอัตราการชำระ ช.พ.ส.")
         fig.update_traces(line_color='#8E24AA', fill='tozeroy')
-        fig.update_layout(height=250, margin=dict(t=30))
+        fig.update_layout(height=250, margin=dict(t=30), font_family="Sarabun")
         st.plotly_chart(fig, use_container_width=True)
 
 # --- 5. PAGE: LEGAL DASHBOARD ---
 def show_legal_dashboard():
-    st.title("⚖️ Dashboard นิติการ")
+    st.markdown("""
+        <div style="background-color: #F5F5F5; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 5px solid #E91E63;">
+            <h2 style="margin:0; color:#333;">⚖️ Dashboard นิติการ (Legal Affairs)</h2>
+        </div>
+    """, unsafe_allow_html=True)
     
     # KPI Metrics
     k1, k2, k3, k4 = st.columns(4)
@@ -287,13 +291,15 @@ def show_legal_dashboard():
         })
         fig = px.bar(df_work, y="กลุ่ม", x=["Pending", "Done"], orientation='h', barmode='stack', 
                      color_discrete_map={"Pending": "#00BCD4", "Done": "#66BB6A"})
+        fig.update_layout(font_family="Sarabun")
         st.plotly_chart(fig, use_container_width=True)
     
     with lc2:
         st.subheader("สถานะรวม")
         fig = px.pie(values=[28, 17], names=["Pending", "Done"], hole=0.6, 
                      color_discrete_sequence=["#00BCD4", "#66BB6A"])
-        fig.add_annotation(text="37.8%", showarrow=False, font_size=20)
+        fig.add_annotation(text="37.8%", showarrow=False, font_size=20, font=dict(family="Sarabun"))
+        fig.update_layout(font_family="Sarabun")
         st.plotly_chart(fig, use_container_width=True)
     
     # Table
@@ -318,7 +324,7 @@ def show_admin_panel():
     })
     st.table(df_users)
 
-# --- 7. MAIN APP LOGIC & NAVIGATION [cite: 16, 17] ---
+# --- 7. MAIN APP LOGIC & NAVIGATION ---
 if not st.session_state.logged_in:
     login_page()
 else:
@@ -332,17 +338,17 @@ else:
         
     st.sidebar.markdown("---")
     
-    # Menu Access Control [cite: 14]
+    # Menu Access Control
     menu_options = []
     
     # Everyone sees Executive Dashboard
     menu_options.append("EIS Dashboard (บทสรุปผู้บริหาร)")
     
-    # Superuser & Admin see Legal Dashboard [cite: 13]
+    # Superuser & Admin see Legal Dashboard
     if st.session_state.role in ["Superuser", "Admin"]:
         menu_options.append("Legal Dashboard")
         
-    # Only Admin sees Admin Panel [cite: 12]
+    # Only Admin sees Admin Panel
     if st.session_state.role == "Admin":
         menu_options.append("Admin Panel")
         
