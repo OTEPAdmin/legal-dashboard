@@ -1,18 +1,19 @@
 import streamlit as st
 import plotly.express as px
+import pandas as pd  # <--- Moved to top (FIX)
 from utils.styles import render_header
 from utils.data_mock import get_dashboard_data
 
 def show_view():
     render_header("📊 บทสรุปผู้บริหาร (Executive Summary)", border_color="#607D8B")
-
+    
     # Filters
     thai_months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
     years = ["2568", "2567", "2566"]
     c1, c2, c3, c4 = st.columns(4)
     with c1: sel_month = st.selectbox("ช่วงเวลา", thai_months, index=10)
     with c2: sel_year = st.selectbox("ปี", years, index=0)
-
+    
     data = get_dashboard_data(sel_year, sel_month)
     st.write("---")
 
@@ -29,12 +30,13 @@ def show_view():
         fig = px.bar(x=data['cps']['apply_vals'], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
         fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
-
+    
     # Finance
     st.markdown("### 💳 การนำส่งเงิน & งบการเงิน")
     f1, f2 = st.columns(2)
     with f1:
         st.caption(f"แนวโน้มการชำระ ช.พ.ค. ({data['finance']['cpk_paid']})")
+        # Ensure 'pd' is defined before this line
         df_trend = pd.DataFrame({'M': range(12), 'V': data['finance']['cpk_trend']})
         fig = px.line(df_trend, x='M', y='V', markers=True)
         fig.update_layout(height=200, margin=dict(t=10,b=10), font_family="Kanit")
@@ -46,4 +48,3 @@ def show_view():
         fig.update_traces(line_color='#8E24AA')
         fig.update_layout(height=200, margin=dict(t=10,b=10), font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
-    import pandas as pd # Import needed inside function or at top
