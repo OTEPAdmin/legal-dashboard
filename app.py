@@ -94,20 +94,124 @@ def show_general_dashboard():
     })
     st.dataframe(df_main, use_container_width=True, hide_index=True)
 
-# --- 6. PAGE: ANALYTICS (Super User & Admin) ---
+# --- 6. PAGE: ANALYTICS (ดีไซน์ใหม่ตามภาพที่ส่งมา) ---
 def show_analytics():
-    st.title("🧪 Advanced Analytics (Mock Data)")
-    st.info("หน้านี้จำลองการแสดงกราฟแนวโน้มคดีรายเดือน")
+    st.title("📊 บทสรุปผู้บริหาร & ข้อมูลสมาชิกเชิงลึก")
+    st.write("ข้อมูลภาพรวมสมาชิก ช.พ.ค. และ ช.พ.ส. ประจำปี 2568")
+
+    # --- ROW 1: ภาพรวมสมาชิก (KPI Cards) ---
+    col_a, col_b = st.columns(2)
     
-    # Mock Time Series Data
-    df_time = pd.DataFrame({
-        "เดือน": ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค."],
-        "คดีรับใหม่": [5, 8, 12, 7, 10],
-        "คดีที่ปิดได้": [3, 4, 8, 9, 6]
+    with col_a:
+        st.markdown("""
+            <div style="background-color:#f0f7f9; padding:15px; border-radius:10px; border-top:5px solid #00acc1">
+                <h4 style="color:#00acc1; margin:0">👥 ภาพรวมสมาชิก ช.พ.ค.</h4>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px">
+                    <div><h2 style="margin:0">933,962</h2><p style="font-size:12px; color:grey">จำนวนสมาชิก</p></div>
+                    <div style="color:#4caf50; text-align:right"><h3 style="margin:0">12,456</h3><p style="font-size:12px">สมาชิกเพิ่ม</p></div>
+                    <div style="color:#e91e63; text-align:right"><h3 style="margin:0">8,967</h3><p style="font-size:12px">จำหน่าย</p></div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col_b:
+        st.markdown("""
+            <div style="background-color:#f9f0f5; padding:15px; border-radius:10px; border-top:5px solid #8e24aa">
+                <h4 style="color:#8e24aa; margin:0">👥 ภาพรวมสมาชิก ช.พ.ส.</h4>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px">
+                    <div><h2 style="margin:0">287,654</h2><p style="font-size:12px; color:grey">จำนวนสมาชิก</p></div>
+                    <div style="color:#4caf50; text-align:right"><h3 style="margin:0">4,532</h3><p style="font-size:12px">สมาชิกเพิ่ม</p></div>
+                    <div style="color:#e91e63; text-align:right"><h3 style="margin:0">5,234</h3><p style="font-size:12px">จำหน่าย</p></div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.write("<br>", unsafe_allow_html=True)
+
+    # --- ROW 2: สมาชิกเพิ่ม/จำหน่าย (Horizontal Bars) ---
+    c1, c2, c3, c4 = st.columns(4)
+    
+    with c1:
+        st.caption("📈 สมาชิกเพิ่ม ช.พ.ค.")
+        fig1 = px.bar(x=[10587, 1869], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#6ECB93'])
+        fig1.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, yaxis_title=None)
+        st.plotly_chart(fig1, use_container_width=True)
+
+    with c2:
+        st.caption("📉 จำหน่าย ช.พ.ค.")
+        fig2 = px.bar(x=[2242, 1345, 4500, 448], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h', 
+                      color=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], color_discrete_sequence=['#FBC02D', '#A367DC', '#E91E63', '#90A4AE'])
+        fig2.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), showlegend=False, xaxis_title=None, yaxis_title=None)
+        st.plotly_chart(fig2, use_container_width=True)
+    
+    # (ทำเช่นเดียวกันกับ c3, c4 สำหรับ ช.พ.ส.)
+    with c3:
+        st.caption("📈 สมาชิกเพิ่ม ช.พ.ส.")
+        fig3 = px.bar(x=[3626, 906], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#6ECB93'])
+        fig3.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, yaxis_title=None)
+        st.plotly_chart(fig3, use_container_width=True)
+
+    with c4:
+        st.caption("📉 จำหน่าย ช.พ.ส.")
+        fig4 = px.bar(x=[1047, 628, 3245, 314], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h', 
+                      color_discrete_sequence=['#FBC02D', '#00BCD4', '#E91E63', '#90A4AE'])
+        fig4.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, yaxis_title=None)
+        st.plotly_chart(fig4, use_container_width=True)
+
+    # --- ROW 3: ข้อมูลสมาชิก DEMOGRAPHIC ---
+    st.divider()
+    st.subheader("👥 ข้อมูลสมาชิก | DEMOGRAPHIC")
+    d1, d2, d3, d4 = st.columns(4)
+
+    with d1:
+        st.caption("สัดส่วนเพศ ช.พ.ค.")
+        fig_p1 = px.pie(values=[38, 62], names=["ชาย", "หญิง"], hole=0.7, color_discrete_sequence=['#03A9F4', '#E91E63'])
+        fig_p1.update_layout(height=200, margin=dict(l=10,r=10,t=10,b=10), showlegend=False)
+        st.plotly_chart(fig_p1, use_container_width=True)
+
+    with d2:
+        st.caption("กลุ่มอายุ ช.พ.ค.")
+        fig_a1 = px.bar(x=["<40", "40-49", "50-59", "60-69", ">70"], y=[8, 12, 25, 22, 12], color_discrete_sequence=['#FF9800'])
+        fig_a1.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, yaxis_title=None)
+        st.plotly_chart(fig_a1, use_container_width=True)
+        
+    # (ทำ d3, d4 ให้เหมือน d1, d2 แต่เปลี่ยนข้อมูลเป็น ช.พ.ส.)
+    with d3:
+        st.caption("สัดส่วนเพศ ช.พ.ส.")
+        fig_p2 = px.pie(values=[42, 58], names=["ชาย", "หญิง"], hole=0.7, color_discrete_sequence=['#03A9F4', '#E91E63'])
+        fig_p2.update_layout(height=200, margin=dict(l=10,r=10,t=10,b=10), showlegend=False)
+        st.plotly_chart(fig_p2, use_container_width=True)
+        
+    with d4:
+        st.caption("กลุ่มอายุ ช.พ.ส.")
+        fig_a2 = px.bar(x=["<40", "40-49", "50-59", "60-69", ">70"], y=[5, 10, 25, 32, 22], color_discrete_sequence=['#9C27B0'])
+        fig_a2.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, yaxis_title=None)
+        st.plotly_chart(fig_a2, use_container_width=True)
+
+    # --- ROW 4: สาเหตุการเสียชีวิต ---
+    st.divider()
+    st.subheader("⚰️ 5 อันดับสาเหตุการเสียชีวิต")
+    col_death1, col_death2 = st.columns(2)
+
+    death_data = pd.DataFrame({
+        "สาเหตุ": ["โรคมะเร็ง", "โรคปอด", "โรคหัวใจ", "โรคชรา", "โรคสมอง"],
+        "ชพค": [198, 125, 90, 70, 65],
+        "ชพส": [45, 38, 32, 28, 22]
     })
-    fig_line = px.line(df_time, x="เดือน", y=["คดีรับใหม่", "คดีที่ปิดได้"], markers=True)
-    fig_line.update_layout(font_family="Sarabun")
-    st.plotly_chart(fig_line, use_container_width=True)
+
+    with col_death1:
+        st.caption("5 อันดับสาเหตุการเสียชีวิต ช.พ.ค.")
+        fig_d1 = px.bar(death_data, x="ชพค", y="สาเหตุ", orientation='h', color="สาเหตุ",
+                        color_discrete_sequence=['#FF7043', '#26C6DA', '#AB47BC', '#FBC02D', '#66BB6A'])
+        fig_d1.update_layout(showlegend=False, height=300, yaxis={'categoryorder':'total ascending'})
+        st.plotly_chart(fig_d1, use_container_width=True)
+
+    with col_death2:
+        st.caption("5 อันดับสาเหตุการเสียชีวิต ช.พ.ส.")
+        fig_d2 = px.bar(death_data, x="ชพส", y="สาเหตุ", orientation='h', color="สาเหตุ",
+                        color_discrete_sequence=['#FF7043', '#AB47BC', '#26C6DA', '#FBC02D', '#66BB6A'])
+        fig_d2.update_layout(showlegend=False, height=300, yaxis={'categoryorder':'total ascending'})
+        st.plotly_chart(fig_d2, use_container_width=True)
 
 # --- 7. PAGE: ADMIN PANEL (Admin Only) ---
 def show_admin():
@@ -149,3 +253,4 @@ else:
         show_analytics()
     elif choice == "จัดการระบบ (Admin)":
         show_admin()
+
