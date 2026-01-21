@@ -3,21 +3,22 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import os
+import base64
 
 # --- 1. CONFIGURATION & STYLE ---
 st.set_page_config(page_title="EIS Platform", layout="wide", page_icon="🏛️")
 
 # Injecting Kanit Font and RESPONSIVE CSS
 st.markdown("""
-   <style>
-        /* 1. เปลี่ยน Link นำเข้าฟอนต์เป็น Kanit */
+    <style>
+        /* Import Kanit Font */
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;700&display=swap');
 
-        /* 2. บังคับใช้ฟอนต์ Kanit กับทุกส่วนของเว็บ */
+        /* Force Kanit font on EVERYTHING including Streamlit widgets and Headers */
         html, body, [class*="css"], .stMarkdown, .stButton, .stTextField, .stNumberInput, .stSelectbox, .stMetric, h1, h2, h3, h4, h5, h6 {
             font-family: 'Kanit', sans-serif !important;
         }
-                
+        
         /* --- RESPONSIVE LOGIN BOX --- */
         .login-box {
             background-color: white;
@@ -25,7 +26,7 @@ st.markdown("""
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             max-width: 400px;
-            width: 100%; /* Responsive width */
+            width: 100%;
             margin: 0 auto;
             border-top: 5px solid #E91E63;
         }
@@ -37,7 +38,7 @@ st.markdown("""
             padding: 15px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             text-align: center;
-            height: 100%; /* Fill container height */
+            height: 100%;
         }
         .card-cpk { border-top: 6px solid #00ACC1; }
         .card-cps { border-top: 6px solid #8E24AA; }
@@ -78,9 +79,8 @@ st.markdown("""
             border-left: 5px solid #607D8B;
         }
 
-        /* --- MOBILE RESPONSIVENESS (Media Queries) --- */
+        /* --- MOBILE RESPONSIVENESS --- */
         @media (max-width: 768px) {
-            /* Stack header elements on mobile */
             .header-container {
                 flex-direction: column;
                 text-align: center;
@@ -90,30 +90,28 @@ st.markdown("""
             .stat-value { font-size: 22px !important; }
             .login-box {
                 padding: 20px;
-                width: 90%; /* 90% width on mobile */
+                width: 90%;
             }
-            /* Adjust padding for small screens */
-            .stBlock { padding: 10px !important; }
         }
     </style>
 """, unsafe_allow_html=True)
 
-# FILENAME OF THE LOGO - Ensure this file exists in your repo!
+# FILENAME OF THE LOGO
 LOGO_FILENAME = "image_11b1c9.jpg"
 
 # --- HELPER: RENDER HEADER WITH LOGO ---
 def render_header(title, border_color="#607D8B"):
-    # Using raw HTML for maximum control over flexbox layout
     logo_html = ""
     if os.path.exists(LOGO_FILENAME):
-        # We encode the image to base64 to embed it directly in HTML safely
-        import base64
-        with open(LOGO_FILENAME, "rb") as f:
-            data = f.read()
-            encoded = base64.b64encode(data).decode()
-        logo_html = f'<img src="data:image/jpeg;base64,{encoded}" style="height: 60px; max-width: 100%;">'
+        try:
+            with open(LOGO_FILENAME, "rb") as f:
+                data = f.read()
+                encoded = base64.b64encode(data).decode()
+            logo_html = f'<img src="data:image/jpeg;base64,{encoded}" style="height: 60px; max-width: 100%;">'
+        except:
+            logo_html = ""
     else:
-        logo_html = "<div style='color:grey; font-size:12px;'>Logo Missing</div>"
+        logo_html = "" # Fail silently if no logo
 
     st.markdown(f"""
         <div class="header-container" style="border-left: 5px solid {border_color};">
@@ -144,7 +142,7 @@ def login_page():
     st.markdown("<br>", unsafe_allow_html=True)
 
     # --- LOGIN BOX ---
-    col1, col2, col3 = st.columns([0.1, 0.8, 0.1]) # Responsive columns
+    col1, col2, col3 = st.columns([0.1, 0.8, 0.1])
     with col2:
         st.markdown('<div class="login-box">', unsafe_allow_html=True)
         st.markdown("<h2 style='text-align: center; margin-top:0;'>🔐 เข้าสู่ระบบ (Login)</h2>", unsafe_allow_html=True)
@@ -198,7 +196,7 @@ def show_eis_dashboard():
                 </div>
             </div>
         """, unsafe_allow_html=True)
-        # [cite_start]Charts for Ch.P.K. [cite: 60-68]
+        # Charts for Ch.P.K.
         c_sub1, c_sub2 = st.columns(2)
         with c_sub1:
             st.caption("📈 สมาชิกเพิ่ม ช.พ.ค.")
@@ -225,7 +223,7 @@ def show_eis_dashboard():
                 </div>
             </div>
         """, unsafe_allow_html=True)
-        # [cite_start]Charts for Ch.P.S. [cite: 69-85]
+        # Charts for Ch.P.S.
         c_sub3, c_sub4 = st.columns(2)
         with c_sub3:
             st.caption("📈 สมาชิกเพิ่ม ช.พ.ส.")
@@ -291,7 +289,7 @@ def show_eis_dashboard():
 
     f1, f2 = st.columns(2)
     
-    # [cite_start]Finance Ch.P.K. [cite: 132-151]
+    # Finance Ch.P.K.
     with f1:
         st.markdown("**💰 เงินสงเคราะห์ ช.พ.ค.**")
         fc1, fc2, fc3 = st.columns(3)
@@ -312,7 +310,7 @@ def show_eis_dashboard():
         fig.update_layout(height=250, margin=dict(t=30), font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
 
-    # [cite_start]Finance Ch.P.S. [cite: 152-178]
+    # Finance Ch.P.S.
     with f2:
         st.markdown("**💰 เงินสงเคราะห์ ช.พ.ส.**")
         fc4, fc5, fc6 = st.columns(3)
@@ -347,7 +345,7 @@ def show_revenue_dashboard():
     
     st.markdown("### | สรุปภาพรวม")
     
-    # [cite_start]ROW 1: KPI Cards [cite: 221-230]
+    # ROW 1: KPI Cards
     k1, k2, k3 = st.columns(3)
     with k1:
         st.markdown("""
@@ -376,13 +374,13 @@ def show_revenue_dashboard():
 
     st.write("---")
     
-    # [cite_start]ROW 2: HEALTH CHECK-UP SUMMARY [cite: 232-252]
+    # ROW 2: HEALTH CHECK-UP SUMMARY
     st.markdown("### 📍 สรุปออกหน่วยตรวจสุขภาพ")
     
     col_h1, col_h2 = st.columns([1, 1.5])
     
     with col_h1:
-        # Check-up Stats (Mockup Cards inside Column)
+        # Check-up Stats
         st.markdown("""
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div class="rev-card-bg" style="background-color:white; border-left: 5px solid #E91E63;">
@@ -405,11 +403,10 @@ def show_revenue_dashboard():
             <br>
             <p><b>อัตราการมาตรวจ</b> (56.8% Success Rate)</p>
         """, unsafe_allow_html=True)
-        # Simple Progress Bar
         st.progress(0.568)
 
     with col_h2:
-        # [cite_start]Age Group Bar Chart [cite: 249-263]
+        # Age Group Bar Chart
         st.markdown("##### 📊 ผู้เข้ารับการตรวจแยกตามกลุ่มอายุ")
         df_age = pd.DataFrame({
             "Age Group": ["20-30 ปี", "31-40 ปี", "41-50 ปี", "51-60 ปี", "60+ ปี"],
@@ -500,7 +497,7 @@ else:
     # Everyone sees Executive Dashboard
     menu_options.append("EIS Dashboard (บทสรุปผู้บริหาร)")
     
-    # NEW: Revenue Dashboard for everyone (or limit if needed)
+    # Revenue Dashboard for everyone (or limit if needed)
     menu_options.append("Revenue Dashboard (รายได้ - โรงพยาบาล)")
 
     # Superuser & Admin see Legal Dashboard
@@ -522,4 +519,3 @@ else:
         show_legal_dashboard()
     elif "Admin Panel" in selection:
         show_admin_panel()
-
