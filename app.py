@@ -101,9 +101,7 @@ LOGO_FILENAME = "image_11b1c9.jpg"
 def get_dashboard_data(year_str, month_str):
     """
     Central logic to generate data based on Year and Month filters.
-    Returns a dictionary used by charts.
     """
-    # 1. Base Multipliers based on Year
     year_int = int(year_str)
     
     if year_int == 2568: # Boom Year
@@ -116,38 +114,29 @@ def get_dashboard_data(year_str, month_str):
         year_mult = 1.0
         trend_base = 85
 
-    # 2. Seasonal Multipliers based on Month
     months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", 
               "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
     month_idx = months.index(month_str)
-    
-    # Late months (Oct-Dec) get higher stats
     month_mult = 1.0 + (month_idx * 0.02) 
 
-    # --- CALCULATIONS ---
-    
-    # Member Stats
+    # Calculations
     cpk_total = int(900000 * year_mult * month_mult)
     cpk_new = int(1200 * year_mult * month_mult)
-    cpk_resign = int(800 * (1/year_mult)) # Resignations go UP if year is bad (low multiplier)
+    cpk_resign = int(800 * (1/year_mult))
 
     cps_total = int(280000 * year_mult * month_mult)
     cps_new = int(400 * year_mult * month_mult)
     cps_resign = int(300 * (1/year_mult))
 
-    # Revenue Stats (Million THB)
     rev_total = 45.80 * year_mult * month_mult
 
-    # Charts Data Construction
     data = {
         "cpk": {
             "total": f"{cpk_total:,}",
             "new": f"+{cpk_new:,}",
             "resign": f"-{cpk_resign:,}",
-            # Bar Chart Data
             "apply_vals": [cpk_new, int(cpk_new * 0.2)], 
             "resign_vals": [int(cpk_resign*0.5), int(cpk_resign*0.3), int(cpk_resign*0.1), int(cpk_resign*0.1)],
-            # Demographics (Shifts with year)
             "gender": [38 + (year_int%2), 62 - (year_int%2)], 
             "age": [10*year_mult, 35, 30, 25/year_mult] 
         },
@@ -155,15 +144,12 @@ def get_dashboard_data(year_str, month_str):
             "total": f"{cps_total:,}",
             "new": f"+{cps_new:,}",
             "resign": f"-{cps_resign:,}",
-            # Bar Chart Data
             "apply_vals": [cps_new, int(cps_new * 0.1)],
             "resign_vals": [int(cps_resign*0.4), int(cps_resign*0.4), int(cps_resign*0.1), int(cps_resign*0.1)],
-             # Demographics
             "gender": [42 - (year_int%2), 58 + (year_int%2)],
             "age": [5*year_mult, 25, 45, 25/year_mult]
         },
         "finance": {
-            # Trend lines change height based on year
             "cpk_trend": [trend_base + (i*0.5*year_mult) for i in range(12)],
             "cps_trend": [trend_base + 2 + (i*0.3*year_mult) for i in range(12)],
             "cpk_paid": f"{trend_base:.2f}%",
@@ -173,7 +159,6 @@ def get_dashboard_data(year_str, month_str):
             "total": f"{rev_total:.2f}",
             "users": f"{int(73000 * year_mult):,}",
             "avg": f"{int(627 * month_mult):,}",
-            # Health Checkup Chart Data
             "checkup_stats": [
                 int(50 * year_mult),   # Provinces
                 int(90 * year_mult),   # Units
@@ -181,7 +166,6 @@ def get_dashboard_data(year_str, month_str):
                 int(9000 * year_mult)  # Attended
             ],
             "checkup_rate": (9000/16000) * year_mult,
-            # Age Distribution Chart (Scales with filter)
             "age_dist": [
                 int(1200 * year_mult), 
                 int(2100 * year_mult), 
@@ -220,13 +204,26 @@ if "logged_in" not in st.session_state:
 # --- 3. LOGIN PAGE ---
 def login_page():
     st.markdown("<br>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns([1, 1, 1])
-    with c2:
-        if os.path.exists(LOGO_FILENAME):
-            st.image(LOGO_FILENAME, width=150, use_container_width=False) 
-        else:
-            st.markdown("<h1 style='text-align:center;'>🏛️</h1>", unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # --- LOGO CENTERED ON TOP (Using Flexbox for perfect centering) ---
+    if os.path.exists(LOGO_FILENAME):
+        try:
+            with open(LOGO_FILENAME, "rb") as f:
+                encoded_logo = base64.b64encode(f.read()).decode()
+            st.markdown(
+                f"""
+                <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+                    <img src="data:image/jpeg;base64,{encoded_logo}" style="width: 150px; max-width: 100%;">
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+        except Exception as e:
+            st.error(f"Error loading logo: {e}")
+    else:
+        st.markdown("<h1 style='text-align:center;'>🏛️</h1>", unsafe_allow_html=True)
+            
+    # --- LOGIN BOX ---
     col1, col2, col3 = st.columns([0.1, 0.8, 0.1])
     with col2:
         st.markdown('<div class="login-box">', unsafe_allow_html=True)
@@ -316,7 +313,7 @@ def show_eis_dashboard():
             fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
 
-    # --- ROW 2: DEMOGRAPHICS (Dynamic) ---
+    # --- ROW 2: DEMOGRAPHICS ---
     st.markdown("#### 👥 ข้อมูลสมาชิก | DEMOGRAPHIC")
     d1, d2, d3, d4 = st.columns(4)
     
