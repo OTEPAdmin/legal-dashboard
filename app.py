@@ -197,5 +197,6 @@ def show_eis_dashboard():
             st.plotly_chart(fig, use_container_width=True)
         with c_sub4:
             st.caption("📉 จำหน่าย ช.พ.ส.")
-            fig = px.bar(x=[1047, 628, 3245, 314], y=["ถอนชื่อ")
+            fig = px.bar(x=[1047, 628, 3245, 314], y=["ถอนชื่อ"])
+
 
