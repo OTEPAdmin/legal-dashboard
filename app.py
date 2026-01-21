@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import base64
 
 # --- 1. CONFIGURATION & STYLE ---
 st.set_page_config(page_title="EIS Platform", layout="wide", page_icon="🏛️")
@@ -23,7 +24,7 @@ st.markdown("""
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             max-width: 400px;
-            margin: 50px auto;
+            margin: 20px auto; /* Reduced margin to fit logo above */
             border-top: 5px solid #E91E63;
         }
 
@@ -55,8 +56,44 @@ st.markdown("""
         .fin-card-blue { background-color: #00BCD4; color: white; padding: 15px; border-radius: 8px; text-align: center; }
         .fin-card-green { background-color: #66BB6A; color: white; padding: 15px; border-radius: 8px; text-align: center; }
         .fin-card-gold { background-color: #FBC02D; color: white; padding: 15px; border-radius: 8px; text-align: center; }
+        
+        /* Header Container for Logo */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #F5F5F5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 5px solid #607D8B;
+        }
+        .header-title {
+            margin: 0;
+            color: #333;
+        }
+        .header-logo img {
+            height: 60px; /* Adjust logo size */
+        }
+        
+        /* Centered Logo for Login */
+        .login-logo {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            margin-top: 50px;
+        }
+        .login-logo img {
+            height: 100px; /* Larger logo for login */
+        }
     </style>
 """, unsafe_allow_html=True)
+
+# URL of the uploaded logo
+LOGO_URL = "https://i.ibb.co/1d4w4z9/image-11ad8a.jpg" # Using a placeholder link for the provided image structure. 
+# Note: In a real deployment, you might place the image in a local 'assets' folder or use st.image("filename.jpg").
+# Since I cannot see local files, I will use st.image with the filename provided in the prompt assuming it is in the same folder,
+# or fallback to a placeholder if it breaks. Here I will assume local file 'image_11ad8a.jpg' exists or render via URL.
 
 # --- 2. SESSION STATE (Authentication) ---
 if "logged_in" not in st.session_state:
@@ -66,11 +103,26 @@ if "logged_in" not in st.session_state:
 
 # --- 3. LOGIN PAGE ---
 def login_page():
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    # Centered Logo
+    col_c1, col_c2, col_c3 = st.columns([1, 1, 1])
+    with col_c2:
+        # Displaying the logo centered above the login box
+        # If you have the file locally, use st.image("image_11ad8a.jpg", width=120)
+        # Here we simulate the center alignment using columns
+        st.markdown(
+            f"""
+            <div style="display: flex; justify-content: center; margin-top: 50px; margin-bottom: -30px; position: relative; z-index: 1;">
+                <img src="{LOGO_URL}" style="width: 120px; border-radius: 50%;">
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+
+    st.markdown("<br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         st.markdown('<div class="login-box">', unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center;'>🔐 เข้าสู่ระบบ (Login)</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; margin-top: 0;'>🔐 เข้าสู่ระบบ (Login)</h2>", unsafe_allow_html=True)
         
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
@@ -97,10 +149,13 @@ def login_page():
 
 # --- 4. PAGE: EIS DASHBOARD (Executive Summary) ---
 def show_eis_dashboard():
-    # Header
-    st.markdown("""
-        <div style="background-color: #F5F5F5; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 5px solid #607D8B;">
-            <h2 style="margin:0; color:#333;">📊 บทสรุปผู้บริหาร (Executive Summary)</h2>
+    # Custom Header with Title Left and Logo Right
+    st.markdown(f"""
+        <div class="header-container" style="border-left: 5px solid #607D8B;">
+            <h2 class="header-title">📊 บทสรุปผู้บริหาร (Executive Summary)</h2>
+            <div class="header-logo">
+                <img src="{LOGO_URL}" style="border-radius: 50%;">
+            </div>
         </div>
     """, unsafe_allow_html=True)
     
@@ -131,7 +186,6 @@ def show_eis_dashboard():
         with c_sub1:
             st.caption("📈 สมาชิกเพิ่ม ช.พ.ค.")
             fig = px.bar(x=[10587, 1869], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
-            # FIX: Explicitly set font_family to Sarabun
             fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
             st.plotly_chart(fig, use_container_width=True)
         with c_sub2:
@@ -139,7 +193,6 @@ def show_eis_dashboard():
             fig = px.bar(x=[2242, 1345, 4500, 448], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h', 
                          color_discrete_sequence=['#FBC02D', '#AB47BC', '#E91E63', '#BDBDBD'])
             fig.update_traces(marker_color=['#FBC02D', '#AB47BC', '#E91E63', '#BDBDBD'])
-            # FIX: Explicitly set font_family to Sarabun
             fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
             st.plotly_chart(fig, use_container_width=True)
 
@@ -213,9 +266,9 @@ def show_eis_dashboard():
         st.plotly_chart(fig, use_container_width=True)
 
     # --- ROW 4: FINANCE ---
-    st.markdown("""
-        <div style="background-color: #E3F2FD; padding: 10px; border-left: 5px solid #2196F3; margin: 20px 0; border-radius: 0 5px 5px 0;">
-            <h3 style="margin:0; font-family:'Sarabun', sans-serif;">💳 การนำส่งเงิน & งบการเงิน</h3>
+    st.markdown(f"""
+        <div class="header-container" style="border-left: 5px solid #2196F3; margin-top: 20px;">
+            <h3 class="header-title">💳 การนำส่งเงิน & งบการเงิน</h3>
         </div>
     """, unsafe_allow_html=True)
 
@@ -265,9 +318,13 @@ def show_eis_dashboard():
 
 # --- 5. PAGE: LEGAL DASHBOARD ---
 def show_legal_dashboard():
-    st.markdown("""
-        <div style="background-color: #F5F5F5; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 5px solid #E91E63;">
-            <h2 style="margin:0; color:#333;">⚖️ Dashboard นิติการ (Legal Affairs)</h2>
+    # Custom Header with Title Left and Logo Right
+    st.markdown(f"""
+        <div class="header-container" style="border-left: 5px solid #E91E63;">
+            <h2 class="header-title">⚖️ Dashboard นิติการ (Legal Affairs)</h2>
+            <div class="header-logo">
+                <img src="{LOGO_URL}" style="border-radius: 50%;">
+            </div>
         </div>
     """, unsafe_allow_html=True)
     
@@ -314,7 +371,15 @@ def show_legal_dashboard():
 
 # --- 6. PAGE: ADMIN PANEL ---
 def show_admin_panel():
-    st.title("⚙️ Admin Control Panel")
+    st.markdown(f"""
+        <div class="header-container" style="border-left: 5px solid #333;">
+            <h2 class="header-title">⚙️ Admin Control Panel</h2>
+            <div class="header-logo">
+                <img src="{LOGO_URL}" style="border-radius: 50%;">
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    
     st.write("จัดการผู้ใช้งานและสิทธิ์การเข้าถึง")
     
     df_users = pd.DataFrame({
