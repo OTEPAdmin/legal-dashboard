@@ -66,7 +66,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# FILENAME OF THE LOGO
+# FILENAME OF THE LOGO - Ensure this file exists in your repo!
 LOGO_FILENAME = "image_11b1c9.jpg"
 
 # --- HELPER: RENDER HEADER WITH LOGO ---
@@ -83,7 +83,8 @@ def render_header(title, border_color="#607D8B"):
         if os.path.exists(LOGO_FILENAME):
             st.image(LOGO_FILENAME, width=100)
         else:
-            st.write("Logo not found")
+            # Fallback if image is missing so the app doesn't look broken
+            st.info("No Logo")
 
 # --- 2. SESSION STATE (Authentication) ---
 if "logged_in" not in st.session_state:
@@ -101,7 +102,9 @@ def login_page():
         if os.path.exists(LOGO_FILENAME):
             st.image(LOGO_FILENAME, width=150, use_container_width=False) 
         else:
-            st.warning(f"Please upload '{LOGO_FILENAME}' to the folder.")
+            # Safe fallback if image upload failed
+            st.markdown("<h1 style='text-align:center;'>🏛️</h1>", unsafe_allow_html=True)
+            st.caption(f"Logo '{LOGO_FILENAME}' not found.")
             
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -137,66 +140,4 @@ def login_page():
 # --- 4. PAGE: EIS DASHBOARD (Member & Finance) ---
 def show_eis_dashboard():
     # Header with Logo
-    render_header("📊 บทสรุปผู้บริหาร (Executive Summary)", border_color="#607D8B")
-    
-    # Filters
-    c1, c2, c3, c4 = st.columns(4)
-    with c1: st.selectbox("ช่วงเวลา", ["พฤศจิกายน", "ธันวาคม"], index=0)
-    with c2: st.selectbox("ปี", ["2568", "2567"], index=0)
-    
-    st.write("---")
-
-    # --- ROW 1: MEMBER OVERVIEW ---
-    col_kpi1, col_kpi2 = st.columns(2)
-    
-    # Card 1: Ch.P.K.
-    with col_kpi1:
-        st.markdown("""
-            <div class="card-cpk">
-                <h3 style="margin:0; color:#00ACC1;">ภาพรวมสมาชิก ช.พ.ค.</h3>
-                <div style="display:flex; justify-content:space-around; margin-top:15px;">
-                    <div><p class="stat-value" style="color:#00ACC1;">933,962</p><p class="stat-label">จำนวนสมาชิก</p></div>
-                    <div><p class="stat-value" style="color:#4CAF50;">12,456</p><p class="stat-up">สมาชิกเพิ่ม</p></div>
-                    <div><p class="stat-value" style="color:#E91E63;">8,967</p><p class="stat-down">จำหน่าย</p></div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-        # Charts for Ch.P.K.
-        c_sub1, c_sub2 = st.columns(2)
-        with c_sub1:
-            st.caption("📈 สมาชิกเพิ่ม ช.พ.ค.")
-            fig = px.bar(x=[10587, 1869], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
-            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
-            st.plotly_chart(fig, use_container_width=True)
-        with c_sub2:
-            st.caption("📉 จำหน่าย ช.พ.ค.")
-            fig = px.bar(x=[2242, 1345, 4500, 448], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h', 
-                         color_discrete_sequence=['#FBC02D', '#AB47BC', '#E91E63', '#BDBDBD'])
-            fig.update_traces(marker_color=['#FBC02D', '#AB47BC', '#E91E63', '#BDBDBD'])
-            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
-            st.plotly_chart(fig, use_container_width=True)
-
-    # Card 2: Ch.P.S.
-    with col_kpi2:
-        st.markdown("""
-            <div class="card-cps">
-                <h3 style="margin:0; color:#8E24AA;">ภาพรวมสมาชิก ช.พ.ส.</h3>
-                <div style="display:flex; justify-content:space-around; margin-top:15px;">
-                    <div><p class="stat-value" style="color:#8E24AA;">287,654</p><p class="stat-label">จำนวนสมาชิก</p></div>
-                    <div><p class="stat-value" style="color:#4CAF50;">4,532</p><p class="stat-up">สมาชิกเพิ่ม</p></div>
-                    <div><p class="stat-value" style="color:#E91E63;">5,234</p><p class="stat-down">จำหน่าย</p></div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-        # Charts for Ch.P.S.
-        c_sub3, c_sub4 = st.columns(2)
-        with c_sub3:
-            st.caption("📈 สมาชิกเพิ่ม ช.พ.ส.")
-            fig = px.bar(x=[3626, 906], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
-            fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Sarabun")
-            st.plotly_chart(fig, use_container_width=True)
-        with c_sub4:
-            st.caption("📉 จำหน่าย ช.พ.ส.")
-            fig = px.bar(x=[1047, 628, 3245, 314], y=["ถอนชื่อ"])
-
-
+    render_header("📊 บทสรุปผู้บริหาร (Executive Summary)",
