@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # --- 1. CONFIG & SETTINGS ---
-st.set_page_config(page_title="Legal & EIS Platform", layout="wide")
+st.set_page_config(page_title="EIS & Legal Platform", layout="wide")
 
 # --- 2. THEME & FONTS (Sarabun) ---
 st.markdown("""
@@ -13,11 +13,12 @@ st.markdown("""
         html, body, [class*="css"] { font-family: 'Sarabun', sans-serif !important; }
         .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; border-left: 5px solid #45B1CD; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
         .login-box { max-width: 400px; margin: auto; padding: 2rem; background: #f8f9fa; border-radius: 15px; border: 1px solid #dee2e6; }
-        .eis-card { background-color:#f8f9fa; padding:15px; border-radius:10px; border-top:5px solid #00acc1; margin-bottom:10px; }
+        .executive-header { background-color: #f1f3f4; padding: 10px 20px; border-radius: 5px; margin-bottom: 20px; border-left: 8px solid #5f6368; }
+        .kpi-card { background-color: white; padding: 20px; border-radius: 10px; border: 1px solid #e0e0e0; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SESSION STATE FOR LOGIN ---
+# --- 3. SESSION STATE ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.role = None
@@ -29,7 +30,7 @@ def login_page():
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         st.markdown('<div class="login-box">', unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center;'>🏛️ Platform Login</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center;'>🏛️ EIS Platform Login</h2>", unsafe_allow_html=True)
         user = st.text_input("Username")
         pw = st.text_input("Password", type="password")
         if st.button("เข้าสู่ระบบ", use_container_width=True):
@@ -37,90 +38,122 @@ def login_page():
                 st.session_state.logged_in, st.session_state.role, st.session_state.name = True, "Admin", "ผู้ดูแลระบบ"
                 st.rerun()
             elif user == "user" and pw == "user123":
-                st.session_state.logged_in, st.session_state.role, st.session_state.name = True, "User", "เจ้าหน้าที่ทั่วไป"
+                st.session_state.logged_in, st.session_state.role, st.session_state.name = True, "User", "เจ้าหน้าที่นิติการ"
                 st.rerun()
             else:
-                st.error("ข้อมูลไม่ถูกต้อง (ลอง: admin / admin123 หรือ user / user123)")
+                st.error("Username หรือ Password ไม่ถูกต้อง")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 5. PAGE: EIS DASHBOARD (หน้าใหม่ตามดีไซน์ล่าสุด) ---
+# --- 5. PAGE: EIS DASHBOARD (บทสรุปผู้บริหาร) ---
 def show_eis_dashboard():
-    st.title("📊 EIS Dashboard - ข้อมูลสมาชิกเชิงลึก")
-    st.write(f"สวัสดีคุณ {st.session_state.name} | ข้อมูลสมาชิก ช.พ.ค. และ ช.พ.ส. ประจำปี 2568")
+    st.markdown('<div class="executive-header"><h2>📊 บทสรุปผู้บริหาร (Executive Summary)</h2></div>', unsafe_allow_html=True)
+    
+    # ส่วนตัวเลือกช่วงเวลา (Filters)
+    with st.expander("🔍 กรองข้อมูลตามช่วงเวลา", expanded=False):
+        c_f1, c_f2, c_f3, c_f4 = st.columns(4)
+        c_f1.selectbox("ช่วงเวลาเริ่มต้น", ["กุมภาพันธ์", "มกราคม"], index=0)
+        c_f2.selectbox("ปีเริ่มต้น", ["2568", "2567"], index=0)
+        c_f3.selectbox("สิ้นสุด", ["กุมภาพันธ์", "มีนาคม"], index=0)
+        c_f4.selectbox("ปีสิ้นสุด", ["2568", "2567"], index=0)
 
-    # Row 1: KPI Summary
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown('<div class="eis-card"><h4>👥 ช.พ.ค.</h4><h2>933,962</h2><p>สมาชิกทั้งหมด</p></div>', unsafe_allow_html=True)
-    with c2:
-        st.markdown('<div class="eis-card" style="border-top-color:#8e24aa"><h4>👥 ช.พ.ส.</h4><h2>287,654</h2><p>สมาชิกทั้งหมด</p></div>', unsafe_allow_html=True)
+    # --- KPI Section ---
+    st.markdown("### 👥 ภาพรวมสมาชิก")
+    col_k1, col_k2 = st.columns(2)
+    with col_k1:
+        st.markdown("""
+        <div class="kpi-card" style="border-top: 5px solid #0097a7;">
+            <h4 style="color:#0097a7;">ช.พ.ค.</h4>
+            <h2 style="margin:0;">933,962</h2>
+            <p style="color:grey; font-size:14px;">สมาชิกทั้งหมด</p>
+            <div style="display:flex; justify-content:space-around; margin-top:10px;">
+                <span style="color:green;">+12,456 เพิ่ม</span>
+                <span style="color:red;">-8,967 จำหน่าย</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_k2:
+        st.markdown("""
+        <div class="kpi-card" style="border-top: 5px solid #d81b60;">
+            <h4 style="color:#d81b60;">ช.พ.ส.</h4>
+            <h2 style="margin:0;">287,654</h2>
+            <p style="color:grey; font-size:14px;">สมาชิกทั้งหมด</p>
+            <div style="display:flex; justify-content:space-around; margin-top:10px;">
+                <span style="color:green;">+4,532 เพิ่ม</span>
+                <span style="color:red;">-5,234 จำหน่าย</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    # Row 2: Demographic Analysis
-    st.subheader("👥 ข้อมูลประชากร (Demographic)")
-    d1, d2, d3, d4 = st.columns(4)
-    with d1:
+    # --- Charts Section ---
+    st.write("<br>", unsafe_allow_html=True)
+    st.markdown("### 🧬 ข้อมูลประชากรและสถิติการเสียชีวิต")
+    
+    row2_1, row2_2, row2_3, row2_4 = st.columns(4)
+    with row2_1:
         fig_p1 = px.pie(values=[38, 62], names=["ชาย", "หญิง"], hole=0.7, title="เพศ ช.พ.ค.", color_discrete_sequence=['#03A9F4', '#E91E63'])
+        fig_p1.update_layout(margin=dict(t=30, b=0, l=0, r=0), height=250)
         st.plotly_chart(fig_p1, use_container_width=True)
-    with d2:
-        fig_a1 = px.bar(x=["<40", "40-70", ">70"], y=[15, 60, 25], title="อายุ ช.พ.ค.", color_discrete_sequence=['#FF9800'])
+    with row2_2:
+        fig_a1 = px.bar(x=["<40", "40-59", "60-69", ">70"], y=[10, 35, 30, 25], title="ช่วงอายุ ช.พ.ค.", color_discrete_sequence=['#FFC107'])
+        fig_a1.update_layout(margin=dict(t=30, b=0, l=0, r=0), height=250, xaxis_title=None, yaxis_title=None)
         st.plotly_chart(fig_a1, use_container_width=True)
-    with d3:
+    with row2_3:
         fig_p2 = px.pie(values=[42, 58], names=["ชาย", "หญิง"], hole=0.7, title="เพศ ช.พ.ส.", color_discrete_sequence=['#03A9F4', '#E91E63'])
+        fig_p2.update_layout(margin=dict(t=30, b=0, l=0, r=0), height=250)
         st.plotly_chart(fig_p2, use_container_width=True)
-    with d4:
-        fig_a2 = px.bar(x=["<40", "40-70", ">70"], y=[10, 55, 35], title="อายุ ช.พ.ส.", color_discrete_sequence=['#9C27B0'])
+    with row2_4:
+        fig_a2 = px.bar(x=["<40", "40-59", "60-69", ">70"], y=[8, 28, 40, 24], title="ช่วงอายุ ช.พ.ส.", color_discrete_sequence=['#9C27B0'])
+        fig_a2.update_layout(margin=dict(t=30, b=0, l=0, r=0), height=250, xaxis_title=None, yaxis_title=None)
         st.plotly_chart(fig_a2, use_container_width=True)
 
-    # Row 3: Death Causes
-    st.subheader("⚰️ 5 อันดับสาเหตุการเสียชีวิต")
-    death_data = pd.DataFrame({"สาเหตุ": ["มะเร็ง", "ปอด", "หัวใจ", "ชรา", "สมอง"], "จำนวน": [198, 125, 90, 70, 65]})
-    fig_death = px.bar(death_data, x="จำนวน", y="สาเหตุ", orientation='h', color="สาเหตุ")
-    st.plotly_chart(fig_death, use_container_width=True)
+    # --- Death Causes ---
+    st.divider()
+    col_d1, col_d2 = st.columns(2)
+    death_labels = ["โรคมะเร็ง", "โรคหัวใจ", "โรคปอด", "โรคชรา", "อื่นๆ"]
+    with col_d1:
+        st.caption("5 อันดับสาเหตุการเสียชีวิต ช.พ.ค.")
+        fig_d1 = px.bar(x=[198, 90, 125, 70, 50], y=death_labels, orientation='h', color=death_labels, color_discrete_sequence=px.colors.qualitative.Vivid)
+        fig_d1.update_layout(height=300, showlegend=False, margin=dict(t=0, b=0, l=0, r=0), yaxis={'categoryorder':'total ascending'})
+        st.plotly_chart(fig_d1, use_container_width=True)
+    with col_d2:
+        st.caption("5 อันดับสาเหตุการเสียชีวิต ช.พ.ส.")
+        fig_d2 = px.bar(x=[45, 38, 32, 28, 15], y=death_labels, orientation='h', color=death_labels, color_discrete_sequence=px.colors.qualitative.Vivid)
+        fig_d2.update_layout(height=300, showlegend=False, margin=dict(t=0, b=0, l=0, r=0), yaxis={'categoryorder':'total ascending'})
+        st.plotly_chart(fig_d2, use_container_width=True)
 
 # --- 6. PAGE: LEGAL DASHBOARD (หน้าเดิม) ---
 def show_legal_dashboard():
-    st.title("⚖️ Legal Dashboard - ภาพรวมคดีความ")
-    k1, k2, k3, k4 = st.columns(4)
-    k1.metric("คดีทั้งหมด", "45 เรื่อง")
-    k2.metric("อยู่ระหว่างดำเนินการ", "28 เรื่อง")
-    k3.metric("เสร็จสิ้น", "17 เรื่อง")
-    k4.metric("ทุนทรัพย์ (ล้านบาท)", "1.25")
-    
-    # Mock Bar Chart
-    df_work = pd.DataFrame({"กลุ่ม": ["สืบสวน", "อุทธรณ์", "คดี"], "จำนวน": [12, 10, 23]})
-    fig = px.bar(df_work, x="กลุ่ม", y="จำนวน", color="กลุ่ม", title="ภาระงานตามกลุ่มงาน")
-    st.plotly_chart(fig, use_container_width=True)
+    st.title("⚖️ Legal Dashboard - ข้อมูลคดีความ")
+    st.info("ส่วนแสดงผลข้อมูลคดีความแยกตามประเภทและสถานะ")
+    # ใส่โค้ดกราฟคดีความเดิมที่นี่...
+    st.metric("จำนวนคดีทั้งหมด", "45 เรื่อง", delta="5 เรื่องจากเดือนก่อน")
 
-# --- 7. PAGE: ADMIN PANEL ---
-def show_admin_panel():
-    st.title("⚙️ Admin Control Panel")
-    st.write("จัดการสิทธิ์และตรวจสอบ Log การใช้งาน")
-    st.table(pd.DataFrame({"User": ["admin", "user"], "Status": ["Online", "Offline"]}))
-
-# --- 8. MAIN NAVIGATION ---
+# --- 7. MAIN NAVIGATION ---
 if not st.session_state.logged_in:
     login_page()
 else:
     # Sidebar
     st.sidebar.markdown(f"### 👤 {st.session_state.name}")
+    st.sidebar.write(f"สิทธิ์: **{st.session_state.role}**")
     if st.sidebar.button("Log out"):
         st.session_state.logged_in = False
         st.rerun()
     
     st.sidebar.divider()
     
-    # เมนูที่ทั้ง User และ Admin เห็นได้
-    menu = ["EIS Dashboard", "Legal Dashboard"]
+    # เมนูที่ทั้ง User และ Admin เข้าถึงได้
+    menu_options = ["บทสรุปผู้บริหาร (EIS Dashboard)", "ข้อมูลคดีความ (Legal Dashboard)"]
     
-    # เมนูเฉพาะ Admin
+    # เมนูสำหรับ Admin เท่านั้น
     if st.session_state.role == "Admin":
-        menu.append("ระบบจัดการ Admin")
-    
-    choice = st.sidebar.radio("เลือกหน้าแดชบอร์ด:", menu)
+        menu_options.append("ระบบจัดการ Admin")
+        
+    choice = st.sidebar.radio("เลือกหน้าแดชบอร์ด:", menu_options)
 
-    if choice == "EIS Dashboard":
+    if "บทสรุปผู้บริหาร" in choice:
         show_eis_dashboard()
-    elif choice == "Legal Dashboard":
+    elif "ข้อมูลคดีความ" in choice:
         show_legal_dashboard()
-    elif choice == "ระบบจัดการ Admin":
-        show_admin_panel()
+    elif "ระบบจัดการ Admin" in choice:
+        st.title("⚙️ ระบบจัดการ Admin")
+        st.write("จัดการสิทธิ์ผู้ใช้งานและ Log ระบบ")
