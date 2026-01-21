@@ -7,62 +7,93 @@ import os
 # --- 1. CONFIGURATION & STYLE ---
 st.set_page_config(page_title="EIS Platform", layout="wide", page_icon="🏛️")
 
-# Injecting Sarabun Font globally and specific Card Styles
+# Injecting Sarabun Font and RESPONSIVE CSS
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
 
-        /* Force Sarabun font on EVERYTHING including Streamlit widgets */
+        /* Global Font Force */
         html, body, [class*="css"], .stMarkdown, .stButton, .stTextField, .stNumberInput, .stSelectbox, .stMetric {
             font-family: 'Sarabun', sans-serif !important;
         }
         
-        /* Login Container */
+        /* --- RESPONSIVE LOGIN BOX --- */
         .login-box {
             background-color: white;
             padding: 40px;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             max-width: 400px;
+            width: 100%; /* Responsive width */
             margin: 0 auto;
             border-top: 5px solid #E91E63;
         }
 
-        /* Dashboard Card Styles */
-        .card-cpk {
+        /* --- DASHBOARD CARDS --- */
+        .card-cpk, .card-cps {
             background-color: white;
             border-radius: 10px;
-            border-top: 6px solid #00ACC1; /* Cyan */
             padding: 15px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             text-align: center;
+            height: 100%; /* Fill container height */
         }
-        .card-cps {
-            background-color: white;
-            border-radius: 10px;
-            border-top: 6px solid #8E24AA; /* Purple */
-            padding: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            text-align: center;
-        }
+        .card-cpk { border-top: 6px solid #00ACC1; }
+        .card-cps { border-top: 6px solid #8E24AA; }
         
-        /* Metric Styling */
+        /* --- METRICS & FONTS --- */
         .stat-value { font-size: 28px; font-weight: bold; margin: 0; color: #333; }
         .stat-label { color: grey; font-size: 14px; }
         .stat-up { color: #4CAF50; font-weight: bold; font-size: 14px; }
         .stat-down { color: #E91E63; font-weight: bold; font-size: 14px; }
         
-        /* Finance Cards */
-        .fin-card-blue { background-color: #00BCD4; color: white; padding: 15px; border-radius: 8px; text-align: center; }
-        .fin-card-green { background-color: #66BB6A; color: white; padding: 15px; border-radius: 8px; text-align: center; }
-        .fin-card-gold { background-color: #FBC02D; color: white; padding: 15px; border-radius: 8px; text-align: center; }
+        /* --- FINANCE CARDS --- */
+        .fin-card-blue { background-color: #00BCD4; color: white; padding: 15px; border-radius: 8px; text-align: center; height: 100%; }
+        .fin-card-green { background-color: #66BB6A; color: white; padding: 15px; border-radius: 8px; text-align: center; height: 100%; }
+        .fin-card-gold { background-color: #FBC02D; color: white; padding: 15px; border-radius: 8px; text-align: center; height: 100%; }
         
-        /* Revenue Dashboard Cards */
-        .rev-card-bg { background-color: #f8f9fa; border-radius: 10px; padding: 15px; border: 1px solid #ddd; text-align: center; }
+        /* --- REVENUE CARDS --- */
+        .rev-card-bg { 
+            background-color: #f8f9fa; 
+            border-radius: 10px; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            text-align: center; 
+            height: 100%;
+        }
         .rev-title { font-size: 16px; color: #555; margin-bottom: 5px; }
         .rev-value { font-size: 32px; font-weight: bold; color: #E91E63; }
         .rev-unit { font-size: 14px; color: #888; }
         
+        /* --- HEADER CONTAINER (Flexbox) --- */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #F5F5F5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 5px solid #607D8B;
+        }
+
+        /* --- MOBILE RESPONSIVENESS (Media Queries) --- */
+        @media (max-width: 768px) {
+            /* Stack header elements on mobile */
+            .header-container {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+            .rev-value { font-size: 24px !important; }
+            .stat-value { font-size: 22px !important; }
+            .login-box {
+                padding: 20px;
+                width: 90%; /* 90% width on mobile */
+            }
+            /* Adjust padding for small screens */
+            .stBlock { padding: 10px !important; }
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -71,20 +102,24 @@ LOGO_FILENAME = "image_11b1c9.jpg"
 
 # --- HELPER: RENDER HEADER WITH LOGO ---
 def render_header(title, border_color="#607D8B"):
-    col1, col2 = st.columns([9, 1])
-    with col1:
-        st.markdown(f"""
-            <div style="background-color: #F5F5F5; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 5px solid {border_color};">
-                <h2 style="margin:0; color:#333;">{title}</h2>
-            </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        # Place logo at top right
-        if os.path.exists(LOGO_FILENAME):
-            st.image(LOGO_FILENAME, width=100)
-        else:
-            # Fallback if image is missing
-            st.info("Logo Missing")
+    # Using raw HTML for maximum control over flexbox layout
+    logo_html = ""
+    if os.path.exists(LOGO_FILENAME):
+        # We encode the image to base64 to embed it directly in HTML safely
+        import base64
+        with open(LOGO_FILENAME, "rb") as f:
+            data = f.read()
+            encoded = base64.b64encode(data).decode()
+        logo_html = f'<img src="data:image/jpeg;base64,{encoded}" style="height: 60px; max-width: 100%;">'
+    else:
+        logo_html = "<div style='color:grey; font-size:12px;'>Logo Missing</div>"
+
+    st.markdown(f"""
+        <div class="header-container" style="border-left: 5px solid {border_color};">
+            <h2 style="margin:0; color:#333;">{title}</h2>
+            <div>{logo_html}</div>
+        </div>
+    """, unsafe_allow_html=True)
 
 # --- 2. SESSION STATE (Authentication) ---
 if "logged_in" not in st.session_state:
@@ -108,7 +143,7 @@ def login_page():
     st.markdown("<br>", unsafe_allow_html=True)
 
     # --- LOGIN BOX ---
-    col1, col2, col3 = st.columns([1, 1, 1])
+    col1, col2, col3 = st.columns([0.1, 0.8, 0.1]) # Responsive columns
     with col2:
         st.markdown('<div class="login-box">', unsafe_allow_html=True)
         st.markdown("<h2 style='text-align: center; margin-top:0;'>🔐 เข้าสู่ระบบ (Login)</h2>", unsafe_allow_html=True)
@@ -138,7 +173,6 @@ def login_page():
 
 # --- 4. PAGE: EIS DASHBOARD (Member & Finance) ---
 def show_eis_dashboard():
-    # Header with Logo
     render_header("📊 บทสรุปผู้บริหาร (Executive Summary)", border_color="#607D8B")
     
     # Filters
@@ -156,7 +190,7 @@ def show_eis_dashboard():
         st.markdown("""
             <div class="card-cpk">
                 <h3 style="margin:0; color:#00ACC1;">ภาพรวมสมาชิก ช.พ.ค.</h3>
-                <div style="display:flex; justify-content:space-around; margin-top:15px;">
+                <div style="display:flex; justify-content:space-around; margin-top:15px; flex-wrap: wrap;">
                     <div><p class="stat-value" style="color:#00ACC1;">933,962</p><p class="stat-label">จำนวนสมาชิก</p></div>
                     <div><p class="stat-value" style="color:#4CAF50;">12,456</p><p class="stat-up">สมาชิกเพิ่ม</p></div>
                     <div><p class="stat-value" style="color:#E91E63;">8,967</p><p class="stat-down">จำหน่าย</p></div>
@@ -183,7 +217,7 @@ def show_eis_dashboard():
         st.markdown("""
             <div class="card-cps">
                 <h3 style="margin:0; color:#8E24AA;">ภาพรวมสมาชิก ช.พ.ส.</h3>
-                <div style="display:flex; justify-content:space-around; margin-top:15px;">
+                <div style="display:flex; justify-content:space-around; margin-top:15px; flex-wrap: wrap;">
                     <div><p class="stat-value" style="color:#8E24AA;">287,654</p><p class="stat-label">จำนวนสมาชิก</p></div>
                     <div><p class="stat-value" style="color:#4CAF50;">4,532</p><p class="stat-up">สมาชิกเพิ่ม</p></div>
                     <div><p class="stat-value" style="color:#E91E63;">5,234</p><p class="stat-down">จำหน่าย</p></div>
@@ -211,7 +245,7 @@ def show_eis_dashboard():
     with d1:
         st.caption("สัดส่วนเพศ ช.พ.ค.")
         fig = px.pie(values=[38, 62], names=["ชาย", "หญิง"], hole=0.6, color_discrete_sequence=['#03A9F4', '#E91E63'])
-        fig.update_layout(height=200, margin=dict(l=20,r=20,t=0,b=20), showlegend=True, legend=dict(orientation="h"), font_family="Sarabun")
+        fig.update_layout(height=200, margin=dict(l=10,r=10,t=0,b=20), showlegend=True, legend=dict(orientation="h"), font_family="Sarabun")
         st.plotly_chart(fig, use_container_width=True)
     with d2:
         st.caption("กลุ่มอายุ ช.พ.ค.")
@@ -221,7 +255,7 @@ def show_eis_dashboard():
     with d3:
         st.caption("สัดส่วนเพศ ช.พ.ส.")
         fig = px.pie(values=[42, 58], names=["ชาย", "หญิง"], hole=0.6, color_discrete_sequence=['#03A9F4', '#E91E63'])
-        fig.update_layout(height=200, margin=dict(l=20,r=20,t=0,b=20), showlegend=True, legend=dict(orientation="h"), font_family="Sarabun")
+        fig.update_layout(height=200, margin=dict(l=10,r=10,t=0,b=20), showlegend=True, legend=dict(orientation="h"), font_family="Sarabun")
         st.plotly_chart(fig, use_container_width=True)
     with d4:
         st.caption("กลุ่มอายุ ช.พ.ส.")
