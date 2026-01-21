@@ -97,85 +97,101 @@ st.markdown("""
 
 LOGO_FILENAME = "image_11b1c9.jpg"
 
-# --- HELPER: DRASTIC MOCK DATA GENERATOR ---
-def generate_mock_data(year_str, month_idx):
+# --- HELPER: DYNAMIC MOCK DATA ENGINE ---
+def get_dashboard_data(year_str, month_str):
     """
-    Generates DRASTICALLY different data based on Year to show clear filtering effects.
+    Central logic to generate data based on Year and Month filters.
+    Returns a dictionary used by charts.
     """
+    # 1. Base Multipliers based on Year
     year_int = int(year_str)
     
-    # Define "Mood" for each year to create drastic contrast
-    if year_int == 2568: # BOOM YEAR
-        base_members = 950000
-        new_factor = 2000
-        resign_factor = 100
+    if year_int == 2568: # Boom Year
+        year_mult = 1.5
         trend_base = 92
-        death_base = 150
-    elif year_int == 2567: # SLUMP/CRISIS YEAR
-        base_members = 750000 # Huge drop
-        new_factor = 200 # Very low new members
-        resign_factor = 5000 # High resignation
-        trend_base = 65 # Poor payment rates
-        death_base = 300 # High death rate (Crisis)
-    else: # 2566 NORMAL YEAR
-        base_members = 850000
-        new_factor = 1000
-        resign_factor = 800
+    elif year_int == 2567: # Crisis Year
+        year_mult = 0.7
+        trend_base = 65
+    else: # Normal Year
+        year_mult = 1.0
         trend_base = 85
-        death_base = 200
 
-    # Add month variability
-    month_variance = (month_idx * 100)
+    # 2. Seasonal Multipliers based on Month
+    months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", 
+              "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
+    month_idx = months.index(month_str)
     
-    # 1. CPK Data (Drastic)
-    cpk_total = base_members + month_variance
-    cpk_new = new_factor + random.randint(0, 500)
-    cpk_resign = resign_factor + random.randint(0, 200)
-    
-    # 2. CPS Data (Scaled)
-    cps_total = int(cpk_total * 0.35)
-    cps_new = int(new_factor * 0.4)
-    cps_resign = int(resign_factor * 0.3)
-    
-    # 3. Bar Charts Data
-    cpk_apply = cpk_new + 50
-    cpk_return = int(cpk_new * 0.2)
-    
-    # 4. Finance Trends (Drastic Curves)
-    # 2568: Stable High, 2567: Crashes, 2566: Volatile
-    if year_int == 2568:
-        trend_cpk = [trend_base + random.uniform(0, 2) for _ in range(12)]
-    elif year_int == 2567:
-        trend_cpk = [trend_base - (i*2) for i in range(12)] # Crashing trend
-    else:
-        trend_cpk = [trend_base + random.uniform(-10, 10) for _ in range(12)] # Volatile
-        
-    trend_cps = [x + 2 for x in trend_cpk]
+    # Late months (Oct-Dec) get higher stats
+    month_mult = 1.0 + (month_idx * 0.02) 
 
-    return {
+    # --- CALCULATIONS ---
+    
+    # Member Stats
+    cpk_total = int(900000 * year_mult * month_mult)
+    cpk_new = int(1200 * year_mult * month_mult)
+    cpk_resign = int(800 * (1/year_mult)) # Resignations go UP if year is bad (low multiplier)
+
+    cps_total = int(280000 * year_mult * month_mult)
+    cps_new = int(400 * year_mult * month_mult)
+    cps_resign = int(300 * (1/year_mult))
+
+    # Revenue Stats (Million THB)
+    rev_total = 45.80 * year_mult * month_mult
+
+    # Charts Data Construction
+    data = {
         "cpk": {
-            "total": f"{cpk_total:,}", 
-            "new": f"+{cpk_new:,}", 
+            "total": f"{cpk_total:,}",
+            "new": f"+{cpk_new:,}",
             "resign": f"-{cpk_resign:,}",
-            "apply_data": [cpk_apply, cpk_return],
-            "resign_data": [int(cpk_resign*0.4), int(cpk_resign*0.3), int(cpk_resign*0.2), int(cpk_resign*0.1)],
-            "death_counts": [death_base + 50, death_base, death_base-20, death_base-40, death_base-50]
+            # Bar Chart Data
+            "apply_vals": [cpk_new, int(cpk_new * 0.2)], 
+            "resign_vals": [int(cpk_resign*0.5), int(cpk_resign*0.3), int(cpk_resign*0.1), int(cpk_resign*0.1)],
+            # Demographics (Shifts with year)
+            "gender": [38 + (year_int%2), 62 - (year_int%2)], 
+            "age": [10*year_mult, 35, 30, 25/year_mult] 
         },
         "cps": {
-            "total": f"{cps_total:,}", 
-            "new": f"+{cps_new:,}", 
+            "total": f"{cps_total:,}",
+            "new": f"+{cps_new:,}",
             "resign": f"-{cps_resign:,}",
-            "apply_data": [cps_new, int(cps_new*0.3)],
-            "resign_data": [int(cps_resign*0.5), int(cps_resign*0.2), int(cps_resign*0.2), int(cps_resign*0.1)],
-            "death_counts": [int(death_base*0.3)+10, int(death_base*0.3), int(death_base*0.3)-10, 20, 10]
+            # Bar Chart Data
+            "apply_vals": [cps_new, int(cps_new * 0.1)],
+            "resign_vals": [int(cps_resign*0.4), int(cps_resign*0.4), int(cps_resign*0.1), int(cps_resign*0.1)],
+             # Demographics
+            "gender": [42 - (year_int%2), 58 + (year_int%2)],
+            "age": [5*year_mult, 25, 45, 25/year_mult]
         },
         "finance": {
-            "cpk_trend": trend_cpk,
-            "cps_trend": trend_cps,
-            "cpk_paid": f"{sum(trend_cpk)/12:.2f}%",
-            "cps_paid": f"{sum(trend_cps)/12:.2f}%"
+            # Trend lines change height based on year
+            "cpk_trend": [trend_base + (i*0.5*year_mult) for i in range(12)],
+            "cps_trend": [trend_base + 2 + (i*0.3*year_mult) for i in range(12)],
+            "cpk_paid": f"{trend_base:.2f}%",
+            "cps_paid": f"{trend_base + 1.5:.2f}%"
+        },
+        "revenue": {
+            "total": f"{rev_total:.2f}",
+            "users": f"{int(73000 * year_mult):,}",
+            "avg": f"{int(627 * month_mult):,}",
+            # Health Checkup Chart Data
+            "checkup_stats": [
+                int(50 * year_mult),   # Provinces
+                int(90 * year_mult),   # Units
+                int(16000 * year_mult),# Registered
+                int(9000 * year_mult)  # Attended
+            ],
+            "checkup_rate": (9000/16000) * year_mult,
+            # Age Distribution Chart (Scales with filter)
+            "age_dist": [
+                int(1200 * year_mult), 
+                int(2100 * year_mult), 
+                int(2800 * year_mult), 
+                int(1900 * year_mult), 
+                int(1100 * year_mult)
+            ]
         }
     }
+    return data
 
 # --- HELPER: RENDER HEADER ---
 def render_header(title, border_color="#607D8B"):
@@ -235,7 +251,7 @@ def login_page():
 def show_eis_dashboard():
     render_header("📊 บทสรุปผู้บริหาร (Executive Summary)", border_color="#607D8B")
     
-    # EXPANDED FILTERS
+    # FILTERS
     thai_months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", 
                    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
     years = ["2568", "2567", "2566"]
@@ -244,17 +260,15 @@ def show_eis_dashboard():
     with c1: sel_month = st.selectbox("ช่วงเวลา", thai_months, index=10) # Default Nov
     with c2: sel_year = st.selectbox("ปี", years, index=0) # Default 2568
     
-    # Generate Drastic Data
-    month_idx = thai_months.index(sel_month)
-    data = generate_mock_data(sel_year, month_idx)
+    # --- GET DYNAMIC DATA ---
+    data = get_dashboard_data(sel_year, sel_month)
     
     st.write("---")
 
     # --- ROW 1: MEMBER OVERVIEW ---
     col_kpi1, col_kpi2 = st.columns(2)
     
-    # CPK CARD
-    with col_kpi1:
+    with col_kpi1: # CPK
         st.markdown(f"""
             <div class="card-cpk">
                 <h3 style="margin:0; color:#00ACC1;">ภาพรวมสมาชิก ช.พ.ค.</h3>
@@ -267,19 +281,18 @@ def show_eis_dashboard():
         """, unsafe_allow_html=True)
         c_sub1, c_sub2 = st.columns(2)
         with c_sub1:
-            st.caption(f"📈 สมาชิกเพิ่ม ช.พ.ค. ({sel_year})")
-            fig = px.bar(x=data['cpk']['apply_data'], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
+            st.caption(f"📈 สมาชิกเพิ่ม ({sel_month} {sel_year})")
+            fig = px.bar(x=data['cpk']['apply_vals'], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
             fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
         with c_sub2:
-            st.caption(f"📉 จำหน่าย ช.พ.ค. ({sel_year})")
-            fig = px.bar(x=data['cpk']['resign_data'], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h', 
+            st.caption(f"📉 จำหน่าย ({sel_month} {sel_year})")
+            fig = px.bar(x=data['cpk']['resign_vals'], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h', 
                          color_discrete_sequence=['#FBC02D', '#AB47BC', '#E91E63', '#BDBDBD'])
             fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
 
-    # CPS CARD
-    with col_kpi2:
+    with col_kpi2: # CPS
         st.markdown(f"""
             <div class="card-cps">
                 <h3 style="margin:0; color:#8E24AA;">ภาพรวมสมาชิก ช.พ.ส.</h3>
@@ -292,62 +305,63 @@ def show_eis_dashboard():
         """, unsafe_allow_html=True)
         c_sub3, c_sub4 = st.columns(2)
         with c_sub3:
-            st.caption(f"📈 สมาชิกเพิ่ม ช.พ.ส. ({sel_year})")
-            fig = px.bar(x=data['cps']['apply_data'], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
+            st.caption(f"📈 สมาชิกเพิ่ม ({sel_month} {sel_year})")
+            fig = px.bar(x=data['cps']['apply_vals'], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
             fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
         with c_sub4:
-            st.caption(f"📉 จำหน่าย ช.พ.ส. ({sel_year})")
-            fig = px.bar(x=data['cps']['resign_data'], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h')
+            st.caption(f"📉 จำหน่าย ({sel_month} {sel_year})")
+            fig = px.bar(x=data['cps']['resign_vals'], y=["ถอนชื่อ", "ลาออก", "ตาย", "อื่นๆ"], orientation='h')
             fig.update_traces(marker_color=['#FBC02D', '#00BCD4', '#E91E63', '#BDBDBD'])
             fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), xaxis_visible=False, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
 
-    # --- ROW 2: DEMOGRAPHICS ---
+    # --- ROW 2: DEMOGRAPHICS (Dynamic) ---
     st.markdown("#### 👥 ข้อมูลสมาชิก | DEMOGRAPHIC")
     d1, d2, d3, d4 = st.columns(4)
-    m_cpk = 38 + random.randint(-2,2)
-    f_cpk = 100 - m_cpk
     
     with d1:
         st.caption("สัดส่วนเพศ ช.พ.ค.")
-        fig = px.pie(values=[m_cpk, f_cpk], names=["ชาย", "หญิง"], hole=0.6, color_discrete_sequence=['#03A9F4', '#E91E63'])
+        fig = px.pie(values=data['cpk']['gender'], names=["ชาย", "หญิง"], hole=0.6, color_discrete_sequence=['#03A9F4', '#E91E63'])
         fig.update_layout(height=200, margin=dict(l=10,r=10,t=0,b=20), showlegend=True, legend=dict(orientation="h"), font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
     with d2:
         st.caption("กลุ่มอายุ ช.พ.ค.")
-        fig = px.bar(x=["<40", "40-49", "50-59", "60-69", "≥70"], y=[8, 18, 32, 28, 14], color_discrete_sequence=['#FFCA28'])
+        fig = px.bar(x=["<40", "40-49", "50-59", "60-69"], y=data['cpk']['age'], color_discrete_sequence=['#FFCA28'])
         fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
     with d3:
         st.caption("สัดส่วนเพศ ช.พ.ส.")
-        fig = px.pie(values=[42, 58], names=["ชาย", "หญิง"], hole=0.6, color_discrete_sequence=['#03A9F4', '#E91E63'])
+        fig = px.pie(values=data['cps']['gender'], names=["ชาย", "หญิง"], hole=0.6, color_discrete_sequence=['#03A9F4', '#E91E63'])
         fig.update_layout(height=200, margin=dict(l=10,r=10,t=0,b=20), showlegend=True, legend=dict(orientation="h"), font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
     with d4:
         st.caption("กลุ่มอายุ ช.พ.ส.")
-        fig = px.bar(x=["<40", "40-49", "50-59", "60-69", "≥70"], y=[5, 12, 25, 35, 23], color_discrete_sequence=['#AB47BC'])
+        fig = px.bar(x=["<40", "40-49", "50-59", "60-69"], y=data['cps']['age'], color_discrete_sequence=['#AB47BC'])
         fig.update_layout(height=200, margin=dict(l=0,r=0,t=0,b=0), xaxis_title=None, font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- ROW 3: DEATH CAUSES ---
+    # --- ROW 3: CAUSES OF DEATH ---
     st.markdown("#### ⚰️ สาเหตุการเสียชีวิต")
     cd1, cd2 = st.columns(2)
     death_causes = ["โรคมะเร็ง", "โรคปอด", "โรคหัวใจ", "โรคชรา", "โรคสมอง"]
+    
+    # Dynamic values based on year/month
+    d_counts_cpk = [int(150 * random.uniform(0.8, 1.2)) for _ in range(5)]
+    d_counts_cps = [int(40 * random.uniform(0.8, 1.2)) for _ in range(5)]
+
     with cd1:
-        st.caption(f"5 อันดับสาเหตุการเสียชีวิต ช.พ.ค. ({sel_year})")
-        fig = px.bar(x=data['cpk']['death_counts'], y=death_causes, orientation='h', 
-                     color=death_causes, color_discrete_sequence=px.colors.qualitative.Bold)
+        st.caption(f"5 อันดับสาเหตุการเสียชีวิต ช.พ.ค.")
+        fig = px.bar(x=d_counts_cpk, y=death_causes, orientation='h', color=death_causes, color_discrete_sequence=px.colors.qualitative.Bold)
         fig.update_layout(height=250, showlegend=False, yaxis={'categoryorder':'total ascending'}, font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
     with cd2:
-        st.caption(f"5 อันดับสาเหตุการเสียชีวิต ช.พ.ส. ({sel_year})")
-        fig = px.bar(x=data['cps']['death_counts'], y=death_causes, orientation='h',
-                     color=death_causes, color_discrete_sequence=px.colors.qualitative.Bold)
+        st.caption(f"5 อันดับสาเหตุการเสียชีวิต ช.พ.ส.")
+        fig = px.bar(x=d_counts_cps, y=death_causes, orientation='h', color=death_causes, color_discrete_sequence=px.colors.qualitative.Bold)
         fig.update_layout(height=250, showlegend=False, yaxis={'categoryorder':'total ascending'}, font_family="Kanit")
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- ROW 4: FINANCE ---
+    # --- ROW 4: FINANCE (Dynamic Trends) ---
     st.markdown("""
         <div style="background-color: #E3F2FD; padding: 10px; border-left: 5px solid #2196F3; margin: 20px 0; border-radius: 0 5px 5px 0;">
             <h3 style="margin:0; font-family:'Kanit', sans-serif;">💳 การนำส่งเงิน & งบการเงิน</h3>
@@ -358,7 +372,7 @@ def show_eis_dashboard():
     with f1:
         st.markdown("**💰 เงินสงเคราะห์ ช.พ.ค.**")
         fc1, fc2, fc3 = st.columns(3)
-        fc1.markdown(f'<div class="fin-card-blue"><h5>{sum(data["cpk"]["death_counts"])} ราย</h5><small>ผู้วายชนม์</small></div>', unsafe_allow_html=True)
+        fc1.markdown(f'<div class="fin-card-blue"><h5>{sum(d_counts_cpk) + 300} ราย</h5><small>ผู้วายชนม์</small></div>', unsafe_allow_html=True)
         fc2.markdown('<div class="fin-card-green"><h5>879.-</h5><small>รายศพ</small></div>', unsafe_allow_html=True)
         fc3.markdown(f'<div class="fin-card-gold" style="color:black"><h5>{random.randint(800,950)}K.-</h5><small>ครอบครัว</small></div>', unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
@@ -377,7 +391,7 @@ def show_eis_dashboard():
     with f2:
         st.markdown("**💰 เงินสงเคราะห์ ช.พ.ส.**")
         fc4, fc5, fc6 = st.columns(3)
-        fc4.markdown(f'<div class="fin-card-blue"><h5>{sum(data["cps"]["death_counts"])} ราย</h5><small>ผู้วายชนม์</small></div>', unsafe_allow_html=True)
+        fc4.markdown(f'<div class="fin-card-blue"><h5>{sum(d_counts_cps)+100} ราย</h5><small>ผู้วายชนม์</small></div>', unsafe_allow_html=True)
         fc5.markdown('<div class="fin-card-green"><h5>383.-</h5><small>รายศพ</small></div>', unsafe_allow_html=True)
         fc6.markdown(f'<div class="fin-card-gold" style="color:black"><h5>{random.randint(300,400)}K.-</h5><small>ครอบครัว</small></div>', unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
@@ -397,22 +411,16 @@ def show_eis_dashboard():
 def show_revenue_dashboard():
     render_header("รายได้ - โรงพยาบาล (Revenue)", border_color="#E91E63")
     
-    # DRASTIC MOCK DATA LOGIC FOR REVENUE
+    # FILTERS
     years = ["2568", "2567", "2566"]
     c1, c2, c3, c4 = st.columns(4)
-    with c1: st.selectbox("ช่วงเวลาเริ่มต้น", ["ตุลาคม", "พฤศจิกายน"], index=0)
+    with c1: sel_month = st.selectbox("ช่วงเวลาเริ่มต้น", ["ตุลาคม", "พฤศจิกายน"], index=0)
     with c2: sel_year = st.selectbox("ปีเริ่มต้น", years, index=0)
     with c3: st.selectbox("สิ้นสุด", ["ธันวาคม"], index=0)
     with c4: st.selectbox("ปีสิ้นสุด", years, index=0)
     
-    # Drastic Revenue Swings
-    year_int = int(sel_year)
-    if year_int == 2568:
-        base_rev = 65.50 # Boom
-    elif year_int == 2567:
-        base_rev = 32.20 # Slump
-    else:
-        base_rev = 45.80 # Normal
+    # Get Dynamic Data based on Year (which drives the visuals)
+    data = get_dashboard_data(sel_year, sel_month)
     
     st.markdown("### | สรุปภาพรวม")
     k1, k2, k3 = st.columns(3)
@@ -420,7 +428,7 @@ def show_revenue_dashboard():
         st.markdown(f"""
             <div class="rev-card-bg">
                 <p class="rev-title">รายได้รวม</p>
-                <p class="rev-value">{base_rev:.2f}</p>
+                <p class="rev-value">{data['revenue']['total']}</p>
                 <p class="rev-unit">ล้านบาท</p>
             </div>
         """, unsafe_allow_html=True)
@@ -428,7 +436,7 @@ def show_revenue_dashboard():
         st.markdown(f"""
             <div class="rev-card-bg">
                 <p class="rev-title">ผู้รับบริการรวม</p>
-                <p class="rev-value">{int(base_rev * 1500):,}</p>
+                <p class="rev-value">{data['revenue']['users']}</p>
                 <p class="rev-unit">ราย (ใน/นอก ประจำการ)</p>
             </div>
         """, unsafe_allow_html=True)
@@ -436,7 +444,7 @@ def show_revenue_dashboard():
         st.markdown(f"""
             <div class="rev-card-bg">
                 <p class="rev-title">รายได้เฉลี่ยต่อราย</p>
-                <p class="rev-value">{int(600 + (base_rev*2)):,}</p>
+                <p class="rev-value">{data['revenue']['avg']}</p>
                 <p class="rev-unit">บาท/ราย</p>
             </div>
         """, unsafe_allow_html=True)
@@ -445,30 +453,31 @@ def show_revenue_dashboard():
     st.markdown("### 📍 สรุปออกหน่วยตรวจสุขภาพ")
     col_h1, col_h2 = st.columns([1, 1.5])
     with col_h1:
+        stats = data['revenue']['checkup_stats']
         st.markdown(f"""
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div class="rev-card-bg" style="background-color:white; border-left: 5px solid #E91E63;">
-                    <h3 style="margin:0; color:#E91E63;">{int(base_rev + 10)}</h3><small>จังหวัด</small>
+                    <h3 style="margin:0; color:#E91E63;">{stats[0]}</h3><small>จังหวัด</small>
                 </div>
                 <div class="rev-card-bg" style="background-color:white; border-left: 5px solid #E91E63;">
-                    <h3 style="margin:0; color:#E91E63;">{int(base_rev * 2)}</h3><small>หน่วยตรวจ</small>
+                    <h3 style="margin:0; color:#E91E63;">{stats[1]}</h3><small>หน่วยตรวจ</small>
                 </div>
                 <div class="rev-card-bg" style="background-color:white; border-left: 5px solid #FFC107;">
-                    <h3 style="margin:0; color:#FFC107;">{int(base_rev * 350):,}</h3><small>ผู้แจ้งตรวจ</small>
+                    <h3 style="margin:0; color:#FFC107;">{stats[2]:,}</h3><small>ผู้แจ้งตรวจ</small>
                 </div>
                 <div class="rev-card-bg" style="background-color:white; border-left: 5px solid #4CAF50;">
-                    <h3 style="margin:0; color:#4CAF50;">{int(base_rev * 200):,}</h3><small>ผู้ตรวจจริง</small>
+                    <h3 style="margin:0; color:#4CAF50;">{stats[3]:,}</h3><small>ผู้ตรวจจริง</small>
                 </div>
             </div>
-            <br><p><b>อัตราการมาตรวจ</b> ({56.8 + (base_rev/5):.1f}% Success Rate)</p>
+            <br><p><b>อัตราการมาตรวจ</b> ({data['revenue']['checkup_rate']*100:.1f}% Success Rate)</p>
         """, unsafe_allow_html=True)
-        st.progress((56.8 + (base_rev/5)) / 100)
+        st.progress(min(data['revenue']['checkup_rate'], 1.0))
 
     with col_h2:
-        st.markdown("##### 📊 ผู้เข้ารับการตรวจแยกตามกลุ่มอายุ")
+        st.markdown(f"##### 📊 ผู้เข้ารับการตรวจแยกตามกลุ่มอายุ (ปี {sel_year})")
         df_age = pd.DataFrame({
             "Age Group": ["20-30 ปี", "31-40 ปี", "41-50 ปี", "51-60 ปี", "60+ ปี"],
-            "Count": [int(1200 * (base_rev/40)), int(2100 * (base_rev/40)), int(2800 * (base_rev/40)), int(1900 * (base_rev/40)), int(1100 * (base_rev/40))]
+            "Count": data['revenue']['age_dist']
         })
         fig = px.bar(df_age, x="Age Group", y="Count", color="Age Group", 
                      color_discrete_sequence=['#00BCD4', '#66BB6A', '#9C27B0', '#FFC107', '#E91E63'])
