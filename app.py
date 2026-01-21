@@ -14,8 +14,11 @@ st.markdown("""
         /* Import Kanit Font */
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;700&display=swap');
 
-        /* Force Kanit font on EVERYTHING including Streamlit widgets and Headers */
-        html, body, [class*="css"], .stMarkdown, .stButton, .stTextField, .stNumberInput, .stSelectbox, .stMetric, h1, h2, h3, h4, h5, h6 {
+        /* Force Kanit font on EVERYTHING including Sidebar, Radio buttons, and Labels */
+        html, body, [class*="css"], 
+        .stMarkdown, .stButton, .stTextField, .stNumberInput, .stSelectbox, .stMetric, 
+        .stRadio, .stSidebar, label, div, span, p,
+        h1, h2, h3, h4, h5, h6 {
             font-family: 'Kanit', sans-serif !important;
         }
         
@@ -111,7 +114,7 @@ def render_header(title, border_color="#607D8B"):
         except:
             logo_html = ""
     else:
-        logo_html = "" # Fail silently if no logo
+        logo_html = ""
 
     st.markdown(f"""
         <div class="header-container" style="border-left: 5px solid {border_color};">
