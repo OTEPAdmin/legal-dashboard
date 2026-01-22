@@ -8,7 +8,7 @@ from utils.data_loader import save_and_load_excel, load_from_disk
 from utils import auth
 import extra_streamlit_components as stx
 
-# Import Views (Removed 'revenue')
+# Import Views (Removed 'revenue' import since it was deleted)
 from views import eis, admin, user_management, audit, legal, hospital, strategy, finance, treasury
 
 # 1. CONFIGURATION
@@ -82,20 +82,20 @@ else:
     st.sidebar.title(f"👤 {st.session_state.username}")
     st.sidebar.write(f"Role: **{st.session_state.role}**")
     
-    # Removed 'Revenue Dashboard' from here as well
+    # Updated Menu Options (Thai Only)
     menu_options = {
         "บทสรุปผู้บริหาร": eis.show_view,
-        "สำนักการคลัง (Treasury/Finance)": treasury.show_view,
-        "ภาพรวมฐานะการเงิน (Financial Overview)": finance.show_view,
-        "กลุ่มนโยบายและยุทธศาสตร์ (Policy & Strategy)": strategy.show_view,
-        "โรงพยาบาล (Hospital/Medical)": hospital.show_view,
-        "สำนักอำนวยการ (Director's Office)": admin.show_view,
-        "สำนักตรวจสอบภายใน (Internal Audit)": audit.show_view,
-        "สำนักนิติการ (Legal Affairs)": legal.show_view,
+        "สำนักการคลัง": treasury.show_view,
+        "ภาพรวมฐานะการเงิน": finance.show_view,
+        "กลุ่มนโยบายและยุทธศาสตร์": strategy.show_view,
+        "โรงพยาบาล": hospital.show_view,
+        "สำนักอำนวยการ": admin.show_view,
+        "สำนักตรวจสอบภายใน": audit.show_view,
+        "สำนักนิติการ": legal.show_view,
     }
 
     if st.session_state.role == "Admin":
-        menu_options["⚙️ User Management (จัดการผู้ใช้)"] = user_management.show_view
+        menu_options["⚙️ จัดการผู้ใช้งาน"] = user_management.show_view
 
     if st.sidebar.button("🚪 ออกจากระบบ (Log off)"):
         st.session_state.logged_in = False
