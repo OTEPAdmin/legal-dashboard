@@ -9,15 +9,12 @@ DATA_FILE = os.path.join(DATA_FOLDER, "otep_data_saved.xlsx")
 def save_and_load_excel(uploaded_file):
     """Saves the uploaded file to disk, then loads it."""
     try:
-        # 1. Create directory if it doesn't exist
         if not os.path.exists(DATA_FOLDER):
             os.makedirs(DATA_FOLDER)
             
-        # 2. Save the file to disk
         with open(DATA_FILE, "wb") as f:
             f.write(uploaded_file.getbuffer())
             
-        # 3. Load the data from the saved file
         return load_from_disk()
     except Exception as e:
         st.error(f"Error saving file: {e}")
@@ -26,14 +23,14 @@ def save_and_load_excel(uploaded_file):
 def load_from_disk():
     """Checks if a saved file exists on disk and loads it."""
     if not os.path.exists(DATA_FILE):
-        return False # No file saved yet
+        return False
         
     try:
-        # Read from the saved file on disk
+        # Read standard sheets
         df_eis = pd.read_excel(DATA_FILE, sheet_name="EIS_Data")
         df_rev = pd.read_excel(DATA_FILE, sheet_name="Revenue_Data")
         
-        # Try to read Admin_Data (Optional)
+        # Read Admin_Data
         try:
             df_admin = pd.read_excel(DATA_FILE, sheet_name="Admin_Data")
             df_admin['Year'] = df_admin['Year'].astype(str)
@@ -41,22 +38,27 @@ def load_from_disk():
         except:
             st.session_state['df_admin'] = pd.DataFrame()
 
+        # Read Audit_Data (NEW)
+        try:
+            df_audit = pd.read_excel(DATA_FILE, sheet_name="Audit_Data")
+            df_audit['Year'] = df_audit['Year'].astype(str)
+            st.session_state['df_audit'] = df_audit
+        except:
+            st.session_state['df_audit'] = pd.DataFrame()
+
         # Ensure 'Year' is treated as text
         df_eis['Year'] = df_eis['Year'].astype(str)
         df_rev['Year'] = df_rev['Year'].astype(str)
         
-        # Save to Session State
         st.session_state['df_eis'] = df_eis
         st.session_state['df_rev'] = df_rev
         return True
     except Exception as e:
-        # If the file is corrupted, we might want to delete it or just show error
         st.error(f"Error reading saved data: {e}")
         return False
 
 def get_dashboard_data(year_str, month_str):
     """Retrieves standard EIS/Revenue data."""
-    # Initialize Defaults
     data = {
         "cpk": {"total": "0", "new": "0", "resign": "0", "apply_vals": [0,0], "resign_vals": [0,0,0,0], "gender": [50,50], "age": [0,0,0,0]},
         "cps": {"total": "0", "new": "0", "resign": "0", "apply_vals": [0,0], "resign_vals": [0,0,0,0], "gender": [50,50], "age": [0,0,0,0]},
@@ -64,9 +66,7 @@ def get_dashboard_data(year_str, month_str):
         "revenue": {"total": "0", "users": "0", "avg": "0", "checkup_stats": [0,0,0,0], "checkup_rate": 0, "age_dist": [0,0,0,0,0]}
     }
 
-    # Ensure data is loaded (Check session state)
     if 'df_eis' not in st.session_state or 'df_rev' not in st.session_state:
-        # Last ditch effort: Try to load from disk if session is empty
         success = load_from_disk()
         if not success:
             return data
