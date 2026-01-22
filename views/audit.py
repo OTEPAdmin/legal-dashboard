@@ -13,11 +13,18 @@ def show_view():
 
     df = st.session_state['df_audit']
 
-    # Filter by Year (Simple filter for now, matching the fiscal year view)
-    years = sorted(df['Year'].unique(), reverse=True)
+    # --- DYNAMIC YEAR FILTER ---
+    # Convert column to string just in case, then find unique values
+    df['Year'] = df['Year'].astype(str)
+    available_years = sorted(df['Year'].unique(), reverse=True)
+    
+    # If no years found, default to empty list to prevent crash
+    if not available_years:
+        available_years = ["2568"]
+
     c1, c2 = st.columns([1, 4])
     with c1:
-        sel_year = st.selectbox("เลือกปีงบประมาณ", years, index=0)
+        sel_year = st.selectbox("เลือกปีงบประมาณ", available_years, index=0)
 
     # Filter Data
     df_yr = df[df['Year'] == sel_year]
@@ -27,13 +34,11 @@ def show_view():
     total_actual = df_yr['Actual_Count'].sum()
     total_issues = df_yr['Issues_Found'].sum()
     
-    # Breakdown totals for sub-labels
     prov_plan = df_yr['Province_Plan'].sum()
     unit_plan = df_yr['Unit_Plan'].sum()
     prov_act = df_yr['Province_Actual'].sum()
     unit_act = df_yr['Unit_Actual'].sum()
     
-    # Action Status
     act_done = df_yr['Action_Complete'].sum()
     act_pending = df_yr['Action_Pending'].sum()
     act_not_start = df_yr['Action_NotStarted'].sum()
@@ -45,7 +50,6 @@ def show_view():
     # --- ROW 1: COLORED CARDS ---
     c1, c2, c3, c4 = st.columns(4)
 
-    # Card 1: Blue (Plan)
     with c1:
         st.markdown(f"""
         <div style="background-color:#203354; padding:15px; border-radius:8px; color:white; height:140px;">
@@ -57,7 +61,6 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # Card 2: Green (Result)
     with c2:
         st.markdown(f"""
         <div style="background-color:#28a745; padding:15px; border-radius:8px; color:white; height:140px;">
@@ -69,7 +72,6 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # Card 3: Yellow (Issues) - Black text for contrast
     with c3:
         st.markdown(f"""
         <div style="background-color:#ffc107; padding:15px; border-radius:8px; color:#333; height:140px;">
@@ -81,7 +83,6 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # Card 4: Cyan (Action)
     with c4:
         st.markdown(f"""
         <div style="background-color:#17a2b8; padding:15px; border-radius:8px; color:white; height:140px;">
@@ -133,7 +134,6 @@ def show_view():
     
     ac1, ac2, ac3 = st.columns(3)
     
-    # Helper for bottom cards
     def status_card(count, label, percent, color, bg_color="#f8f9fa"):
         st.markdown(f"""
         <div style="background-color:{bg_color}; border-left: 5px solid {color}; padding:15px; border-radius:5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align:center;">
