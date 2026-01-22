@@ -5,18 +5,19 @@ import datetime
 from utils.styles import load_css
 from utils.data_loader import load_data_from_excel
 
-# --- NEW: Import Cookie Manager ---
+# Import Cookie Manager
 import extra_streamlit_components as stx
 
 # Import Views
 from views import eis, revenue
 
-# 1. CONFIGURATION (Updated Title)
+# 1. CONFIGURATION
 st.set_page_config(page_title="ระบบศูนย์ข้อมูลกลาง สกสค.", layout="wide", page_icon="🏛️")
 load_css()
 
-# --- COOKIE MANAGER SETUP ---
-@st.cache_resource(experimental_allow_widgets=True)
+# --- COOKIE MANAGER SETUP (Fixed) ---
+# Removed 'experimental_allow_widgets=True' to fix the TypeError
+@st.cache_resource
 def get_manager():
     return stx.CookieManager()
 
@@ -31,18 +32,20 @@ if "logged_in" not in st.session_state:
 # Try to auto-login from Cookie (if not already logged in)
 if not st.session_state.logged_in:
     # Read the cookie named "user_session"
-    cookie_user = cookie_manager.get(cookie="user_session")
-    
-    if cookie_user:
-        # Restore session based on cookie value
-        if cookie_user == "admin":
-            st.session_state.logged_in = True
-            st.session_state.role = "Admin"
-            st.session_state.username = "Administrator"
-        elif cookie_user == "user":
-            st.session_state.logged_in = True
-            st.session_state.role = "User"
-            st.session_state.username = "General User"
+    # We use a try-except block because sometimes cookie reading can be flaky on first load
+    try:
+        cookie_user = cookie_manager.get(cookie="user_session")
+        if cookie_user:
+            if cookie_user == "admin":
+                st.session_state.logged_in = True
+                st.session_state.role = "Admin"
+                st.session_state.username = "Administrator"
+            elif cookie_user == "user":
+                st.session_state.logged_in = True
+                st.session_state.role = "User"
+                st.session_state.username = "General User"
+    except Exception as e:
+        print(f"Cookie read error: {e}")
 
 # 3. LOGIN PAGE LOGIC
 def login_page():
@@ -71,7 +74,7 @@ def login_page():
     else:
         st.markdown("<h1 style='text-align:center; font-size: 80px;'>🏛️</h1>", unsafe_allow_html=True)
     
-    # --- LOGIN FORM (Updated Title) ---
+    # --- LOGIN FORM ---
     c1, c2, c3 = st.columns([1, 1.5, 1])
     with c2:
         st.markdown('<div class="login-box"><h2 style="text-align: center;">🔐 ระบบศูนย์ข้อมูลกลาง สกสค.</h2>', unsafe_allow_html=True)
@@ -103,7 +106,6 @@ def login_page():
                 
                 # --- SET COOKIE IF REMEMBER CHECKED ---
                 if remember:
-                    # Set cookie to expire in 10 days
                     expires = datetime.datetime.now() + datetime.timedelta(days=10)
                     cookie_manager.set("user_session", valid_user, expires_at=expires)
                 
