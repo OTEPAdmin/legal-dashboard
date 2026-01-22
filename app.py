@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import base64
 import datetime
+import time
 from utils.styles import load_css
 from utils.data_loader import load_data_from_excel
 
@@ -16,12 +17,8 @@ st.set_page_config(page_title="ระบบศูนย์ข้อมูลก�
 load_css()
 
 # --- COOKIE MANAGER SETUP (Fixed) ---
-# Removed 'experimental_allow_widgets=True' to fix the TypeError
-@st.cache_resource
-def get_manager():
-    return stx.CookieManager()
-
-cookie_manager = get_manager()
+# We instantiate this directly. Caching is not needed/allowed for widgets anymore.
+cookie_manager = stx.CookieManager()
 
 # 2. SESSION STATE & AUTO-LOGIN CHECK
 if "logged_in" not in st.session_state:
@@ -31,10 +28,11 @@ if "logged_in" not in st.session_state:
 
 # Try to auto-login from Cookie (if not already logged in)
 if not st.session_state.logged_in:
-    # Read the cookie named "user_session"
-    # We use a try-except block because sometimes cookie reading can be flaky on first load
     try:
+        # Get the cookie
         cookie_user = cookie_manager.get(cookie="user_session")
+        
+        # Cookie Manager sometimes returns None on first load, so we check if it exists
         if cookie_user:
             if cookie_user == "admin":
                 st.session_state.logged_in = True
@@ -44,6 +42,12 @@ if not st.session_state.logged_in:
                 st.session_state.logged_in = True
                 st.session_state.role = "User"
                 st.session_state.username = "General User"
+            
+            # Force a rerun if login was successful to update the UI immediately
+            if st.session_state.logged_in:
+                time.sleep(0.1)  # Brief pause to ensure state settles
+                st.rerun()
+                
     except Exception as e:
         print(f"Cookie read error: {e}")
 
