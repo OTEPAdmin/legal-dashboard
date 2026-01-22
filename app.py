@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import base64
 from utils.styles import load_css
+from utils.data_loader import load_data_from_excel # Import the new function
 
 # Import Views
 from views import eis, revenue
@@ -82,13 +83,27 @@ else:
         st.rerun()
 
     st.sidebar.divider()
+    
+    # --- FILE UPLOADER (New!) ---
+    st.sidebar.markdown("### 📂 Upload Data")
+    uploaded_file = st.sidebar.file_uploader("Choose Excel File", type=["xlsx"])
+    
+    if uploaded_file:
+        # Check if we already loaded this specific file to avoid reloading on every click
+        if 'last_loaded_file' not in st.session_state or st.session_state.last_loaded_file != uploaded_file.name:
+            success = load_data_from_excel(uploaded_file)
+            if success:
+                st.session_state.last_loaded_file = uploaded_file.name
+                st.sidebar.success("✅ Data Loaded!")
+                # Force a rerun to update graphs immediately
+                st.rerun()
+        else:
+            st.sidebar.info("✅ Using loaded data")
+    else:
+        st.sidebar.warning("⚠️ Please upload data")
+
+    st.sidebar.divider()
     selection = st.sidebar.radio("เลือกเมนู:", list(menu_options.keys()))
     
     if selection in menu_options:
         menu_options[selection]()
-        
-    # --- REFRESH BUTTON (Added Back) ---
-    st.sidebar.divider()
-    if st.sidebar.button("🔄 Refresh Data"):
-        st.cache_data.clear()
-        st.rerun()
