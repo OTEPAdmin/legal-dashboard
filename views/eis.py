@@ -71,9 +71,10 @@ def show_view():
         cpk_ex = df_ex_filtered[df_ex_filtered['Type'] == 'CPK'].sum(numeric_only=True)
         cps_ex = df_ex_filtered[df_ex_filtered['Type'] == 'CPS'].sum(numeric_only=True)
     else:
-        # Fallback zeros
+        # Fallback zeros AND define empty dataframe to prevent crash
         cpk_ex = pd.Series(0, index=['Cause_Cancer','Cause_Lung','Cause_Heart','Cause_Old','Cause_Brain','Fin_Deceased','Fin_Per_Body','Fin_Family'])
         cps_ex = cpk_ex.copy()
+        df_ex_filtered = pd.DataFrame(columns=['Type', 'Fin_Per_Body']) # <--- FIX ADDED HERE
 
     # --- UI SECTION 1: MEMBERS ---
     st.markdown("##### 👥 ภาพรวมสมาชิก")
@@ -130,7 +131,6 @@ def show_view():
     st.write("---")
 
     # --- UI SECTION 2: CHARTS & DEMO ---
-    # (Simplified charts for brevity - reusing logic from previous step, can be expanded)
     cpk_new_total = int(sums['CPK_New'])
     cpk_resign_total = int(sums['CPK_Resign'])
     
@@ -153,14 +153,13 @@ def show_view():
     
     d1, d2 = st.columns(2)
     
-    # Common settings for death charts
     death_labels = ["โรคมะเร็ง", "โรคปอด", "โรคหัวใจ", "โรคชรา", "โรคสมอง"]
-    death_colors = ['#FF7043', '#29B6F6', '#AB47BC', '#FFCA28', '#66BB6A'] # Orange, Blue, Purple, Yellow, Green
+    death_colors = ['#FF7043', '#29B6F6', '#AB47BC', '#FFCA28', '#66BB6A'] 
 
     # CPK Death
     with d1:
         st.markdown("###### 📉 5 อันดับสาเหตุการเสียชีวิต ช.พ.ค.")
-        cpk_vals = [cpk_ex['Cause_Cancer'], cpk_ex['Cause_Lung'], cpk_ex['Cause_Heart'], cpk_ex['Cause_Old'], cpk_ex['Cause_Brain']]
+        cpk_vals = [cpk_ex.get('Cause_Cancer',0), cpk_ex.get('Cause_Lung',0), cpk_ex.get('Cause_Heart',0), cpk_ex.get('Cause_Old',0), cpk_ex.get('Cause_Brain',0)]
         fig = go.Figure(go.Bar(
             x=cpk_vals, y=death_labels, orientation='h', 
             marker_color=death_colors, text=cpk_vals, textposition='auto'
@@ -171,7 +170,7 @@ def show_view():
     # CPS Death
     with d2:
         st.markdown("###### 📉 5 อันดับสาเหตุการเสียชีวิต ช.พ.ส.")
-        cps_vals = [cps_ex['Cause_Cancer'], cps_ex['Cause_Lung'], cps_ex['Cause_Heart'], cps_ex['Cause_Old'], cps_ex['Cause_Brain']]
+        cps_vals = [cps_ex.get('Cause_Cancer',0), cps_ex.get('Cause_Lung',0), cps_ex.get('Cause_Heart',0), cps_ex.get('Cause_Old',0), cps_ex.get('Cause_Brain',0)]
         fig = go.Figure(go.Bar(
             x=cps_vals, y=death_labels, orientation='h', 
             marker_color=death_colors, text=cps_vals, textposition='auto'
@@ -186,7 +185,6 @@ def show_view():
 
     f1, f2 = st.columns(2)
 
-    # Helper for Financial Cards
     def fin_card(title, count, per_body, total_fam, bg_color="#E0F7FA"):
         st.markdown(f"""
         <div style="background:{bg_color}; padding:15px; border-radius:10px; margin-bottom:20px;">
@@ -209,14 +207,20 @@ def show_view():
         """, unsafe_allow_html=True)
 
     with f1:
-        # Note: Per body is likely not a sum, but an average or rate. 
-        # For this dashboard logic (summing), we might want to take the LATEST rate.
-        # But for 'count' and 'family total', summing is correct.
-        # Let's assume 'Fin_Per_Body' in excel is the rate per person. We should probably take max() or mean().
-        # Let's take MAX for rate.
-        rate = df_ex_filtered[df_ex_filtered['Type'] == 'CPK']['Fin_Per_Body'].max() if not df_ex_filtered.empty else 0
-        fin_card("เงินสงเคราะห์ ช.พ.ค.", cpk_ex['Fin_Deceased'], rate, cpk_ex['Fin_Family'], "#E0F7FA")
+        # Check if filtered dataframe exists and has 'Type' column before filtering
+        rate = 0
+        if not df_ex_filtered.empty and 'Type' in df_ex_filtered.columns:
+             subset = df_ex_filtered[df_ex_filtered['Type'] == 'CPK']
+             if not subset.empty:
+                 rate = subset['Fin_Per_Body'].max()
+        
+        fin_card("เงินสงเคราะห์ ช.พ.ค.", cpk_ex.get('Fin_Deceased',0), rate, cpk_ex.get('Fin_Family',0), "#E0F7FA")
 
     with f2:
-        rate = df_ex_filtered[df_ex_filtered['Type'] == 'CPS']['Fin_Per_Body'].max() if not df_ex_filtered.empty else 0
-        fin_card("เงินสงเคราะห์ ช.พ.ส.", cps_ex['Fin_Deceased'], rate, cps_ex['Fin_Family'], "#F3E5F5")
+        rate = 0
+        if not df_ex_filtered.empty and 'Type' in df_ex_filtered.columns:
+             subset = df_ex_filtered[df_ex_filtered['Type'] == 'CPS']
+             if not subset.empty:
+                 rate = subset['Fin_Per_Body'].max()
+
+        fin_card("เงินสงเคราะห์ ช.พ.ส.", cps_ex.get('Fin_Deceased',0), rate, cps_ex.get('Fin_Family',0), "#F3E5F5")
