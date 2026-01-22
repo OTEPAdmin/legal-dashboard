@@ -21,11 +21,7 @@ def load_from_disk():
         return False
         
     try:
-        # Load Standard Sheets
-        df_eis = pd.read_excel(DATA_FILE, sheet_name="EIS_Data")
-        df_rev = pd.read_excel(DATA_FILE, sheet_name="Revenue_Data")
-        
-        # Helper to load optional sheets
+        # Helper to load sheets
         def load_sheet(name):
             try:
                 df = pd.read_excel(DATA_FILE, sheet_name=name)
@@ -35,6 +31,9 @@ def load_from_disk():
             except:
                 return pd.DataFrame()
 
+        # Load all sheets
+        st.session_state['df_eis'] = load_sheet("EIS_Data")
+        st.session_state['df_rev'] = load_sheet("Revenue_Data")
         st.session_state['df_admin'] = load_sheet("Admin_Data")
         st.session_state['df_audit'] = load_sheet("Audit_Data")
         st.session_state['df_legal'] = load_sheet("Legal_Data")
@@ -43,21 +42,18 @@ def load_from_disk():
         st.session_state['df_strategy'] = load_sheet("Strategy_Data")
         st.session_state['df_finance'] = load_sheet("Finance_Data")
         st.session_state['df_treasury'] = load_sheet("Treasury_Data")
-        
-        # NEW: Welfare Data
         st.session_state['df_welfare'] = load_sheet("Welfare_Data")
-
-        df_eis['Year'] = df_eis['Year'].astype(str)
-        df_rev['Year'] = df_rev['Year'].astype(str)
         
-        st.session_state['df_eis'] = df_eis
-        st.session_state['df_rev'] = df_rev
+        # NEW: Dorm Data
+        st.session_state['df_dorm'] = load_sheet("Dorm_Data")
+
         return True
     except Exception as e:
         st.error(f"Error reading saved data: {e}")
         return False
 
 def get_dashboard_data(year_str, month_str):
+    # Standard dummy logic for old components
     data = {
         "cpk": {"total": "0", "new": "0", "resign": "0", "apply_vals": [0,0], "resign_vals": [0,0,0,0], "gender": [50,50], "age": [0,0,0,0]},
         "cps": {"total": "0", "new": "0", "resign": "0", "apply_vals": [0,0], "resign_vals": [0,0,0,0], "gender": [50,50], "age": [0,0,0,0]},
