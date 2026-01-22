@@ -25,11 +25,14 @@ def load_from_disk():
         df_eis = pd.read_excel(DATA_FILE, sheet_name="EIS_Data")
         df_rev = pd.read_excel(DATA_FILE, sheet_name="Revenue_Data")
         
-        # Load Optional Sheets
+        # Helper to load optional sheets
         def load_sheet(name):
             try:
                 df = pd.read_excel(DATA_FILE, sheet_name=name)
-                return df.assign(Year=lambda x: x['Year'].astype(str))
+                # Ensure Year is string
+                if 'Year' in df.columns:
+                    df['Year'] = df['Year'].astype(str)
+                return df
             except:
                 return pd.DataFrame()
 
@@ -38,9 +41,10 @@ def load_from_disk():
         st.session_state['df_legal'] = load_sheet("Legal_Data")
         st.session_state['df_hospital'] = load_sheet("Hospital_Data")
         st.session_state['df_eis_extra'] = load_sheet("EIS_Extra")
-        
-        # NEW: Strategy Data
         st.session_state['df_strategy'] = load_sheet("Strategy_Data")
+        
+        # NEW: Finance Data
+        st.session_state['df_finance'] = load_sheet("Finance_Data")
 
         df_eis['Year'] = df_eis['Year'].astype(str)
         df_rev['Year'] = df_rev['Year'].astype(str)
@@ -59,5 +63,5 @@ def get_dashboard_data(year_str, month_str):
         "finance": {"cpk_paid": "0%", "cps_paid": "0%", "cpk_trend": [0]*12, "cps_trend": [0]*12},
         "revenue": {"total": "0", "users": "0", "avg": "0", "checkup_stats": [0,0,0,0], "checkup_rate": 0, "age_dist": [0,0,0,0,0]}
     }
-    # Logic populated by loading file...
+    # (Logic populated by loading file...)
     return data
