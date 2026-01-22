@@ -9,8 +9,8 @@ from utils.data_loader import load_data_from_excel
 # Import Cookie Manager
 import extra_streamlit_components as stx
 
-# Import Views
-from views import eis, revenue
+# Import Views (Added 'admin')
+from views import eis, revenue, admin
 
 # 1. CONFIGURATION
 st.set_page_config(page_title="ระบบศูนย์ข้อมูลกลาง สกสค.", layout="wide", page_icon="🏛️")
@@ -73,7 +73,7 @@ def login_page():
     else:
         st.markdown("<h1 style='text-align:center; font-size: 80px;'>🏛️</h1>", unsafe_allow_html=True)
     
-    # --- NEW HEADER TEXT (No Lock, No Box) ---
+    # --- HEADER TEXT ---
     st.markdown(
         """
         <h1 style='text-align: center; margin-bottom: 0px; font-weight: bold;'>ยินดีต้อนรับ</h1>
@@ -83,10 +83,8 @@ def login_page():
     )
     
     # --- LOGIN FORM ---
-    # Using [1, 1.2, 1] ratio to keep the form centered but not too wide
     c1, c2, c3 = st.columns([1, 1.2, 1])
     with c2:
-        # Note: 'login-box' div removed to remove the background card style
         st.caption("⚠️ **ชื่อผู้ใช้และรหัสผ่านต้องระบุตัวพิมพ์เล็ก-ใหญ่ให้ถูกต้อง** (Case Sensitive)")
         
         user = st.text_input("ชื่อผู้ใช้ (Username)")
@@ -113,7 +111,6 @@ def login_page():
                 st.session_state.role = role_name
                 st.session_state.username = display_name
                 
-                # Set Cookie
                 if remember:
                     expires = datetime.datetime.now() + datetime.timedelta(days=10)
                     cookie_manager.set("user_session", valid_user, expires_at=expires)
@@ -133,9 +130,9 @@ else:
     menu_options = {
         "EIS Dashboard (บทสรุปผู้บริหาร)": eis.show_view,
         "Revenue Dashboard (รายได้)": revenue.show_view,
+        "สำนักอำนวยการ (Director's Office)": admin.show_view, # NEW MENU ITEM
     }
 
-    # Logout Button
     if st.sidebar.button("🚪 ออกจากระบบ (Log off)"):
         st.session_state.logged_in = False
         st.session_state.role = None
