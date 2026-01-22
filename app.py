@@ -215,3 +215,13 @@ else:
     else:
         st.sidebar.warning("🚫 No dashboards assigned.")
         st.info("คุณไม่ได้รับสิทธิ์ในการเข้าถึงแดชบอร์ดใดๆ กรุณาติดต่อผู้ดูแลระบบ")
+# --- TEMPORARY RESET BUTTON (Delete after use) ---
+if st.sidebar.button("⚠️ RESET ALL USERS (Fix Login)"):
+    import os
+    if os.path.exists("users.json"):
+        os.remove("users.json")
+        st.sidebar.success("✅ Users reset! Please reload the page.")
+        time.sleep(1)
+        st.rerun()
+    else:
+        st.sidebar.warning("File already deleted.")
