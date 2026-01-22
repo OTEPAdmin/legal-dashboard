@@ -8,8 +8,24 @@ def load_users():
     if not os.path.exists(FILE_PATH):
         # Default initial users
         default_users = {
-            "admin": {"password": "admin123", "role": "Admin", "name": "Administrator"},
-            "user": {"password": "user123", "role": "User", "name": "General User"}
+            "admin": {
+                "password": "admin", 
+                "role": "Admin", 
+                "name": "Administrator",
+                "allowed_views": [] # Admin sees all
+            },
+            "super": {
+                "password": "super", 
+                "role": "Superuser", 
+                "name": "Super User",
+                "allowed_views": [] # Superuser sees all dashboards
+            },
+            "user": {
+                "password": "user", 
+                "role": "User", 
+                "name": "General User",
+                "allowed_views": ["บทสรุปผู้บริหาร"] # Default assigned view
+            }
         }
         with open(FILE_PATH, "w", encoding='utf-8') as f:
             json.dump(default_users, f, ensure_ascii=False, indent=4)
@@ -30,8 +46,8 @@ def check_login(username, password):
         return users[username]
     return None
 
-def add_user(username, password, role, name):
-    """Adds a new user."""
+def add_user(username, password, role, name, allowed_views=None):
+    """Adds a new user with specific dashboard access."""
     users = load_users()
     if username in users:
         return False, "⚠️ Username already exists"
@@ -39,7 +55,8 @@ def add_user(username, password, role, name):
     users[username] = {
         "password": password,
         "role": role,
-        "name": name
+        "name": name,
+        "allowed_views": allowed_views if allowed_views else []
     }
     save_users(users)
     return True, "✅ User created successfully!"
@@ -58,7 +75,7 @@ def delete_user(username):
     """Deletes a user."""
     users = load_users()
     if username in users:
-        if username == "admin": # Prevent deleting the main admin
+        if username == "admin": 
             return False, "⚠️ Cannot delete main Admin"
         del users[username]
         save_users(users)
