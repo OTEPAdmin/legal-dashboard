@@ -8,8 +8,8 @@ from utils.data_loader import save_and_load_excel, load_from_disk
 from utils import auth
 import extra_streamlit_components as stx
 
-# Import Views (Added legal)
-from views import eis, revenue, admin, user_management, audit, legal
+# Import Views (Added hospital)
+from views import eis, revenue, admin, user_management, audit, legal, hospital
 
 # 1. CONFIGURATION
 st.set_page_config(page_title="ระบบศูนย์ข้อมูลกลาง สกสค.", layout="wide", page_icon="🏛️")
@@ -85,9 +85,10 @@ else:
     menu_options = {
         "EIS Dashboard (บทสรุปผู้บริหาร)": eis.show_view,
         "Revenue Dashboard (รายได้)": revenue.show_view,
+        "โรงพยาบาล (Hospital/Medical)": hospital.show_view, # NEW ITEM
         "สำนักอำนวยการ (Director's Office)": admin.show_view,
         "สำนักตรวจสอบภายใน (Internal Audit)": audit.show_view,
-        "สำนักนิติการ (Legal Affairs)": legal.show_view, # NEW ITEM
+        "สำนักนิติการ (Legal Affairs)": legal.show_view,
     }
 
     if st.session_state.role == "Admin":
