@@ -6,13 +6,13 @@ FILE_PATH = "users.json"
 def load_users():
     """Loads users from JSON file. Creates default if missing."""
     if not os.path.exists(FILE_PATH):
-        # Default initial users with dummy emails (Change these to real ones to test!)
+        # Default initial users
         default_users = {
             "admin": {
                 "password": "admin", 
                 "role": "Admin", 
                 "name": "Administrator",
-                "email": "admin@example.com",
+                "email": "vforwardth@gmail.com", # <--- UPDATED HERE
                 "allowed_views": []
             },
             "super": {
