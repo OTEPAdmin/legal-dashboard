@@ -16,8 +16,8 @@ from views import eis, revenue
 st.set_page_config(page_title="ระบบศูนย์ข้อมูลกลาง สกสค.", layout="wide", page_icon="🏛️")
 load_css()
 
-# --- COOKIE MANAGER SETUP (Fixed) ---
-# We instantiate this directly. Caching is not needed/allowed for widgets anymore.
+# --- COOKIE MANAGER SETUP ---
+# Initialized directly to avoid caching errors
 cookie_manager = stx.CookieManager()
 
 # 2. SESSION STATE & AUTO-LOGIN CHECK
@@ -29,10 +29,7 @@ if "logged_in" not in st.session_state:
 # Try to auto-login from Cookie (if not already logged in)
 if not st.session_state.logged_in:
     try:
-        # Get the cookie
         cookie_user = cookie_manager.get(cookie="user_session")
-        
-        # Cookie Manager sometimes returns None on first load, so we check if it exists
         if cookie_user:
             if cookie_user == "admin":
                 st.session_state.logged_in = True
@@ -43,9 +40,9 @@ if not st.session_state.logged_in:
                 st.session_state.role = "User"
                 st.session_state.username = "General User"
             
-            # Force a rerun if login was successful to update the UI immediately
+            # Force a rerun if login was successful
             if st.session_state.logged_in:
-                time.sleep(0.1)  # Brief pause to ensure state settles
+                time.sleep(0.1)
                 st.rerun()
                 
     except Exception as e:
@@ -79,9 +76,14 @@ def login_page():
         st.markdown("<h1 style='text-align:center; font-size: 80px;'>🏛️</h1>", unsafe_allow_html=True)
     
     # --- LOGIN FORM ---
-    c1, c2, c3 = st.columns([1, 1.5, 1])
+    # Adjusted column ratio to [1, 2, 1] to give the title more space
+    c1, c2, c3 = st.columns([1, 2, 1])
     with c2:
-        st.markdown('<div class="login-box"><h2 style="text-align: center;">🔐 ระบบศูนย์ข้อมูลกลาง สกสค.</h2>', unsafe_allow_html=True)
+        # Added 'white-space: nowrap;' to force single line
+        st.markdown(
+            '<div class="login-box"><h2 style="text-align: center; white-space: nowrap;">🔐 ระบบศูนย์ข้อมูลกลาง สกสค.</h2>', 
+            unsafe_allow_html=True
+        )
         st.caption("⚠️ **ชื่อผู้ใช้และรหัสผ่านต้องระบุตัวพิมพ์เล็ก-ใหญ่ให้ถูกต้อง** (Case Sensitive)")
         
         user = st.text_input("ชื่อผู้ใช้ (Username)")
@@ -131,11 +133,10 @@ else:
         "Revenue Dashboard (รายได้)": revenue.show_view,
     }
 
-    # Logout Button (Deletes Cookie)
+    # Logout Button
     if st.sidebar.button("🚪 ออกจากระบบ (Log off)"):
         st.session_state.logged_in = False
         st.session_state.role = None
-        # Delete the cookie
         cookie_manager.delete("user_session")
         st.rerun()
 
