@@ -6,48 +6,43 @@ from utils.styles import render_header
 def show_view():
     render_header("📊 ภาพรวมสำนักอำนวยการ (Director's Office)", border_color="#3F51B5")
 
-    # --- FILTERS (Matching the image design) ---
     months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", 
               "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
-    years = ["2568", "2567"]
     
-    # Check if data exists
     if 'df_admin' not in st.session_state or st.session_state['df_admin'].empty:
-        st.error("⚠️ ไม่พบข้อมูล Admin_Data ใน Excel (Please add 'Admin_Data' tab to your file)")
+        st.error("⚠️ ไม่พบข้อมูล Admin_Data ใน Excel")
         return
 
     df = st.session_state['df_admin']
+    
+    # --- DYNAMIC YEARS ---
+    df['Year'] = df['Year'].astype(str)
+    available_years = sorted(df['Year'].unique(), reverse=True)
+    if not available_years: available_years = ["2568"]
 
     # Filter UI
     c1, c2, c3, c4, c5 = st.columns([1,1,1,1,1])
     with c1: m_start = st.selectbox("เดือนเริ่มต้น", months, index=0)
-    with c2: y_start = st.selectbox("ปีเริ่มต้น", years, index=0)
+    with c2: y_start = st.selectbox("ปีเริ่มต้น", available_years, index=0)
     with c3: m_end = st.selectbox("ถึงเดือน", months, index=11)
-    with c4: y_end = st.selectbox("ถึงปี", years, index=0)
+    with c4: y_end = st.selectbox("ถึงปี", available_years, index=0)
     with c5: 
         st.write("") 
         st.write("") 
         if st.button("🔍 กรองข้อมูล", use_container_width=True):
             st.rerun()
 
-    # --- GET DATA FOR SELECTED MONTH (Currently showing specific month data for Cards) ---
-    # For simplicity, we grab the "End Month" data to show on cards, 
-    # but the Chart will show the trend.
     current_data = df[(df['Year'] == str(y_end)) & (df['Month'] == m_end)]
     
     if current_data.empty:
         st.warning(f"ไม่พบข้อมูลสำหรับ {m_end} {y_end}")
-        # Use zeros if no data
         d = {col: 0 for col in df.columns if col not in ['Year', 'Month']}
     else:
         d = current_data.iloc[0].to_dict()
 
     st.write("---")
 
-    # --- ROW 1: KPI CARDS ---
     col1, col2, col3, col4, col5 = st.columns(5)
-
-    # Card 1: Complaints (Blue)
     with col1:
         st.markdown(f"""
         <div style="background:white; padding:15px; border-radius:10px; border-top: 5px solid #3F51B5; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
@@ -60,7 +55,6 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # Card 2: Vehicles (Red/Orange)
     with col2:
         st.markdown(f"""
         <div style="background:white; padding:15px; border-radius:10px; border-top: 5px solid #F44336; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
@@ -73,7 +67,6 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # Card 3: Website (Purple)
     with col3:
         st.markdown(f"""
         <div style="background:white; padding:15px; border-radius:10px; border-top: 5px solid #9C27B0; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
@@ -87,7 +80,6 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # Card 4: Facebook (Blue)
     with col4:
         st.markdown(f"""
         <div style="background:white; padding:15px; border-radius:10px; border-top: 5px solid #2196F3; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
@@ -97,7 +89,6 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
         
-    # Card 5: LINE (Green)
     with col5:
         st.markdown(f"""
         <div style="background:white; padding:15px; border-radius:10px; border-top: 5px solid #4CAF50; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
@@ -110,17 +101,13 @@ def show_view():
     st.write("---")
     st.markdown("### 📈 ข้อมูลช่องทางดิจิทัล (Phase 1)")
 
-    # --- ROW 2: CHARTS ---
-    gc1, gc2 = st.columns([2, 1]) # 2/3 width for chart, 1/3 for summary
+    gc1, gc2 = st.columns([2, 1])
 
-    # Left: Line Chart (Trend)
     with gc1:
         st.markdown("##### 📉 LINE Official - แนวโน้มการเพิ่มเพื่อน (รายเดือน)")
         
-        # Prepare data for chart (Filter by selected year)
         df_chart = df[df['Year'] == str(y_end)].copy()
         
-        # Sort by month index to ensure correct order
         month_order = {m: i for i, m in enumerate(months)}
         df_chart['month_num'] = df_chart['Month'].map(month_order)
         df_chart = df_chart.sort_values('month_num')
@@ -135,11 +122,9 @@ def show_view():
         else:
             st.info("ไม่มีข้อมูลกราฟสำหรับปีที่เลือก")
 
-    # Right: Summary Grid
     with gc2:
         st.markdown("##### 📊 สรุปช่องทางดิจิทัล")
         
-        # Helper function for mini cards
         def mini_card(icon, label, value, unit, color="#eee"):
             st.markdown(f"""
             <div style="display:flex; align-items:center; background:#F8F9FA; padding:10px; border-radius:8px; margin-bottom:10px;">
