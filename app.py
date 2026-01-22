@@ -120,9 +120,3 @@ else:
     # Run the selected function
     if selection in menu_options:
         menu_options[selection]()
-        
-    # --- REFRESH BUTTON (Indented correctly inside the 'else' block) ---
-    st.sidebar.divider()
-    if st.sidebar.button("🔄 Refresh Data"):
-        st.cache_data.clear()
-        st.rerun()
