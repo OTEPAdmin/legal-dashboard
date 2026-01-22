@@ -8,8 +8,8 @@ from utils.data_loader import save_and_load_excel, load_from_disk
 from utils import auth
 import extra_streamlit_components as stx
 
-# Import Views (Added Treasury)
-from views import eis, revenue, admin, user_management, audit, legal, hospital, strategy, finance, treasury
+# Import Views (Removed 'revenue')
+from views import eis, admin, user_management, audit, legal, hospital, strategy, finance, treasury
 
 # 1. CONFIGURATION
 st.set_page_config(page_title="ระบบศูนย์ข้อมูลกลาง สกสค.", layout="wide", page_icon="🏛️")
@@ -82,9 +82,10 @@ else:
     st.sidebar.title(f"👤 {st.session_state.username}")
     st.sidebar.write(f"Role: **{st.session_state.role}**")
     
+    # Removed 'Revenue Dashboard' from here as well
     menu_options = {
         "บทสรุปผู้บริหาร": eis.show_view,
-        "สำนักการคลัง (Treasury/Finance)": treasury.show_view, # NEW ITEM
+        "สำนักการคลัง (Treasury/Finance)": treasury.show_view,
         "ภาพรวมฐานะการเงิน (Financial Overview)": finance.show_view,
         "กลุ่มนโยบายและยุทธศาสตร์ (Policy & Strategy)": strategy.show_view,
         "โรงพยาบาล (Hospital/Medical)": hospital.show_view,
