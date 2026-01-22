@@ -5,7 +5,8 @@ from utils.styles import render_header
 from utils.data_loader import get_dashboard_data
 
 def show_view():
-    render_header("📊 บทสรุปผู้บริหาร (Executive Summary)", border_color="#607D8B")
+    # --- CHANGED TITLE HERE ---
+    render_header("📊 บทสรุปผู้บริหาร", border_color="#607D8B")
     
     # Check if data exists in session to get years
     available_years = ["2568"]
