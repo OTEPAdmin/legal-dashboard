@@ -6,11 +6,11 @@ import time
 from utils.styles import load_css
 from utils.data_loader import save_and_load_excel, load_from_disk
 from utils import auth
-from utils import email_service # Import Email Service
+from utils import email_service
 import extra_streamlit_components as stx
 
 # Import Views
-from views import eis, admin, user_management, audit, legal, hospital, strategy, finance, treasury, welfare, dorm, procurement
+from views import eis, admin, user_management, audit, legal, hospital, strategy, finance, treasury, welfare, dorm, procurement, api_management
 
 # 1. CONFIGURATION
 st.set_page_config(page_title="ระบบศูนย์ข้อมูลกลาง สกสค.", layout="wide", page_icon="🏛️")
@@ -24,7 +24,6 @@ if "logged_in" not in st.session_state:
     st.session_state.username = ""
     st.session_state.allowed_views = [] 
     
-# MFA States
 if "login_stage" not in st.session_state:
     st.session_state.login_stage = "credentials" 
 if "temp_user_data" not in st.session_state:
@@ -68,7 +67,6 @@ def login_page():
     
     c1, c2, c3 = st.columns([1, 1.2, 1])
     with c2:
-        # --- STAGE 1: USERNAME / PASSWORD ---
         if st.session_state.login_stage == "credentials":
             st.caption("⚠️ **กรุณาเข้าสู่ระบบด้วยรหัสผ่าน**")
             user = st.text_input("ชื่อผู้ใช้ (Username)")
@@ -85,33 +83,21 @@ def login_page():
                     if not user_email or "@" not in user_email:
                         st.error("❌ บัญชีนี้ยังไม่ได้ระบุอีเมล กรุณาติดต่อ Admin")
                     else:
-                        # Try to send email (It will likely fail without real settings)
                         email_service.send_otp_email(user_email, otp)
-                        
-                        # --- FORCE SHOW OTP FOR TESTING ---
                         st.info(f"🔑 **TEST MODE OTP:** {otp}") 
-                        # ----------------------------------
-
                         st.session_state.temp_user_data = user_data
                         st.session_state.temp_user_data['remember'] = remember
                         st.session_state.otp_secret = otp
                         st.session_state.login_stage = "otp"
-                        
-                        # Wait longer so you can read the OTP before reload
                         time.sleep(5) 
                         st.rerun()
                 else:
                     st.error("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
 
-        # --- STAGE 2: OTP VERIFICATION ---
         elif st.session_state.login_stage == "otp":
-            # Show the OTP here too just in case it refreshed too fast
             st.warning(f"🔑 **TEST CODE:** {st.session_state.otp_secret}")
-            
             st.info(f"📧 กรุณากรอกรหัส 6 หลักที่ส่งไปยัง {st.session_state.temp_user_data.get('email')}")
-            
             otp_input = st.text_input("รหัส OTP", max_chars=6)
-            
             c_back, c_conf = st.columns(2)
             with c_back:
                 if st.button("ย้อนกลับ", use_container_width=True):
@@ -125,11 +111,9 @@ def login_page():
                         st.session_state.role = user_data["role"]
                         st.session_state.username = user_data["name"]
                         st.session_state.allowed_views = user_data.get("allowed_views", [])
-                        
                         if user_data.get('remember'):
                             expires = datetime.datetime.now() + datetime.timedelta(days=10)
                             cookie_manager.set("user_session", user_data['username'], expires_at=expires)
-                        
                         st.session_state.login_stage = "credentials"
                         st.session_state.otp_secret = ""
                         st.rerun()
@@ -167,7 +151,8 @@ else:
                 menu_options[name] = view_func
 
     if st.session_state.role == "Admin":
-        menu_options["⚙️ จัดการผู้ใช้งาน"] = user_management.show_view
+        menu_options["⚙️ จัดการผู้ใช้งาน (Users)"] = user_management.show_view
+        menu_options["🔌 จัดการ API (API Keys)"] = api_management.show_view
 
     if st.sidebar.button("🚪 ออกจากระบบ (Log off)"):
         st.session_state.logged_in = False
