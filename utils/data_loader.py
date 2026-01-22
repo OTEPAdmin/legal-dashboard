@@ -7,10 +7,13 @@ DATA_FILE = os.path.join(DATA_FOLDER, "otep_data_saved.xlsx")
 
 def save_and_load_excel(uploaded_file):
     try:
+        # 1. Save the new file to disk (Overwriting the old one)
         if not os.path.exists(DATA_FOLDER):
             os.makedirs(DATA_FOLDER)
         with open(DATA_FILE, "wb") as f:
             f.write(uploaded_file.getbuffer())
+        
+        # 2. Immediately load the new data
         return load_from_disk()
     except Exception as e:
         st.error(f"Error saving file: {e}")
@@ -21,17 +24,17 @@ def load_from_disk():
         return False
         
     try:
-        # Helper to load sheets
         def load_sheet(name):
             try:
                 df = pd.read_excel(DATA_FILE, sheet_name=name)
+                # Force Year to be string to prevent formatting errors (e.g. 2,568)
                 if 'Year' in df.columns:
                     df['Year'] = df['Year'].astype(str)
                 return df
             except:
                 return pd.DataFrame()
 
-        # Load all sheets
+        # Load ALL dashboards
         st.session_state['df_eis'] = load_sheet("EIS_Data")
         st.session_state['df_rev'] = load_sheet("Revenue_Data")
         st.session_state['df_admin'] = load_sheet("Admin_Data")
@@ -45,7 +48,7 @@ def load_from_disk():
         st.session_state['df_welfare'] = load_sheet("Welfare_Data")
         st.session_state['df_dorm'] = load_sheet("Dorm_Data")
         
-        # NEW: Procurement Data
+        # ✅ THIS LINE IS CRITICAL FOR PROCUREMENT DASHBOARD
         st.session_state['df_procure'] = load_sheet("Procure_Data")
 
         return True
@@ -54,10 +57,5 @@ def load_from_disk():
         return False
 
 def get_dashboard_data(year_str, month_str):
-    data = {
-        "cpk": {"total": "0", "new": "0", "resign": "0", "apply_vals": [0,0], "resign_vals": [0,0,0,0], "gender": [50,50], "age": [0,0,0,0]},
-        "cps": {"total": "0", "new": "0", "resign": "0", "apply_vals": [0,0], "resign_vals": [0,0,0,0], "gender": [50,50], "age": [0,0,0,0]},
-        "finance": {"cpk_paid": "0%", "cps_paid": "0%", "cpk_trend": [0]*12, "cps_trend": [0]*12},
-        "revenue": {"total": "0", "users": "0", "avg": "0", "checkup_stats": [0,0,0,0], "checkup_rate": 0, "age_dist": [0,0,0,0,0]}
-    }
-    return data
+    # (Placeholder function for compatibility)
+    return {}
