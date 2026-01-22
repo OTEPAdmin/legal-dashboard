@@ -3,3 +3,5 @@ pandas
 plotly
 openpyxl
 extra-streamlit-components
+fastapi
+uvicorn
