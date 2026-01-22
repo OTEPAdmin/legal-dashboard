@@ -4,15 +4,22 @@ import pandas as pd
 def load_data_from_excel(uploaded_file):
     """Reads the uploaded Excel file and saves it to Session State."""
     try:
-        # Read both sheets
+        # Read all necessary sheets
         df_eis = pd.read_excel(uploaded_file, sheet_name="EIS_Data")
         df_rev = pd.read_excel(uploaded_file, sheet_name="Revenue_Data")
         
-        # Ensure 'Year' is treated as text for matching
+        # Try to read Admin_Data (Handle case where tab is missing to prevent crash)
+        try:
+            df_admin = pd.read_excel(uploaded_file, sheet_name="Admin_Data")
+            df_admin['Year'] = df_admin['Year'].astype(str)
+            st.session_state['df_admin'] = df_admin
+        except:
+            st.session_state['df_admin'] = pd.DataFrame() # Empty if missing
+
+        # Ensure 'Year' is treated as text
         df_eis['Year'] = df_eis['Year'].astype(str)
         df_rev['Year'] = df_rev['Year'].astype(str)
         
-        # Save to Session State so we can access it everywhere
         st.session_state['df_eis'] = df_eis
         st.session_state['df_rev'] = df_rev
         return True
@@ -21,10 +28,8 @@ def load_data_from_excel(uploaded_file):
         return False
 
 def get_dashboard_data(year_str, month_str):
-    """
-    Retrieves data from Session State and filters it.
-    """
-    # 1. Default Defaults (Empty Zeros)
+    """Retrieves standard EIS/Revenue data."""
+    # (This function remains mostly the same, used for other tabs)
     data = {
         "cpk": {"total": "0", "new": "0", "resign": "0", "apply_vals": [0,0], "resign_vals": [0,0,0,0], "gender": [50,50], "age": [0,0,0,0]},
         "cps": {"total": "0", "new": "0", "resign": "0", "apply_vals": [0,0], "resign_vals": [0,0,0,0], "gender": [50,50], "age": [0,0,0,0]},
@@ -32,18 +37,15 @@ def get_dashboard_data(year_str, month_str):
         "revenue": {"total": "0", "users": "0", "avg": "0", "checkup_stats": [0,0,0,0], "checkup_rate": 0, "age_dist": [0,0,0,0,0]}
     }
 
-    # 2. Check if data is loaded
     if 'df_eis' not in st.session_state or 'df_rev' not in st.session_state:
-        return data  # Return zeros if no file uploaded yet
+        return data
 
     df_eis = st.session_state['df_eis']
     df_rev = st.session_state['df_rev']
 
-    # 3. MATCH & FILL EIS DATA
+    # EIS Logic
     if not df_eis.empty:
-        # Filter safely
         row = df_eis[(df_eis['Year'] == str(year_str)) & (df_eis['Month'] == month_str)]
-        
         if not row.empty:
             r = row.iloc[0]
             data['cpk']['total'] = f"{int(r['CPK_Total']):,}"
@@ -65,7 +67,7 @@ def get_dashboard_data(year_str, month_str):
             data['finance']['cpk_trend'] = [paid_cpk - 2 + (i*0.2) for i in range(12)]
             data['finance']['cps_trend'] = [paid_cps - 2 + (i*0.2) for i in range(12)]
 
-    # 4. MATCH & FILL REVENUE DATA
+    # Revenue Logic
     if not df_rev.empty:
         row = df_rev[(df_rev['Year'] == str(year_str)) & (df_rev['Month'] == month_str)]
         if not row.empty:
