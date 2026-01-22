@@ -1,21 +1,48 @@
 import streamlit as st
 import os
 import base64
+import datetime
 from utils.styles import load_css
-from utils.data_loader import load_data_from_excel # Import the new function
+from utils.data_loader import load_data_from_excel
+
+# --- NEW: Import Cookie Manager ---
+import extra_streamlit_components as stx
 
 # Import Views
 from views import eis, revenue
 
-# 1. CONFIGURATION
-st.set_page_config(page_title="EIS Platform", layout="wide", page_icon="🏛️")
+# 1. CONFIGURATION (Updated Title)
+st.set_page_config(page_title="ระบบศูนย์ข้อมูลกลาง สกสค.", layout="wide", page_icon="🏛️")
 load_css()
 
-# 2. SESSION STATE
+# --- COOKIE MANAGER SETUP ---
+@st.cache_resource(experimental_allow_widgets=True)
+def get_manager():
+    return stx.CookieManager()
+
+cookie_manager = get_manager()
+
+# 2. SESSION STATE & AUTO-LOGIN CHECK
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.role = None
     st.session_state.username = ""
+
+# Try to auto-login from Cookie (if not already logged in)
+if not st.session_state.logged_in:
+    # Read the cookie named "user_session"
+    cookie_user = cookie_manager.get(cookie="user_session")
+    
+    if cookie_user:
+        # Restore session based on cookie value
+        if cookie_user == "admin":
+            st.session_state.logged_in = True
+            st.session_state.role = "Admin"
+            st.session_state.username = "Administrator"
+        elif cookie_user == "user":
+            st.session_state.logged_in = True
+            st.session_state.role = "User"
+            st.session_state.username = "General User"
 
 # 3. LOGIN PAGE LOGIC
 def login_page():
@@ -44,22 +71,42 @@ def login_page():
     else:
         st.markdown("<h1 style='text-align:center; font-size: 80px;'>🏛️</h1>", unsafe_allow_html=True)
     
-    # --- LOGIN FORM ---
+    # --- LOGIN FORM (Updated Title) ---
     c1, c2, c3 = st.columns([1, 1.5, 1])
     with c2:
-        st.markdown('<div class="login-box"><h2 style="text-align: center;">🔐 เข้าสู่ระบบ</h2>', unsafe_allow_html=True)
+        st.markdown('<div class="login-box"><h2 style="text-align: center;">🔐 ระบบศูนย์ข้อมูลกลาง สกสค.</h2>', unsafe_allow_html=True)
         st.caption("⚠️ **ชื่อผู้ใช้และรหัสผ่านต้องระบุตัวพิมพ์เล็ก-ใหญ่ให้ถูกต้อง** (Case Sensitive)")
         
         user = st.text_input("ชื่อผู้ใช้ (Username)")
         pw = st.text_input("รหัสผ่าน (Password)", type="password")
-        remember = st.checkbox("จำรหัสผ่านไว้ (Remember me)")
+        remember = st.checkbox("จำรหัสผ่านไว้ 10 วัน (Remember me 10 days)")
         
         if st.button("เข้าสู่ระบบ (Sign In)", use_container_width=True):
+            # Auth Logic
+            valid_user = None
+            role_name = ""
+            display_name = ""
+            
             if user == "admin" and pw == "admin123":
-                st.session_state.logged_in, st.session_state.role, st.session_state.username = True, "Admin", "Administrator"
-                st.rerun()
+                valid_user = "admin"
+                role_name = "Admin"
+                display_name = "Administrator"
             elif user == "user" and pw == "user123":
-                st.session_state.logged_in, st.session_state.role, st.session_state.username = True, "User", "General User"
+                valid_user = "user"
+                role_name = "User"
+                display_name = "General User"
+            
+            if valid_user:
+                st.session_state.logged_in = True
+                st.session_state.role = role_name
+                st.session_state.username = display_name
+                
+                # --- SET COOKIE IF REMEMBER CHECKED ---
+                if remember:
+                    # Set cookie to expire in 10 days
+                    expires = datetime.datetime.now() + datetime.timedelta(days=10)
+                    cookie_manager.set("user_session", valid_user, expires_at=expires)
+                
                 st.rerun()
             else:
                 st.error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
@@ -78,24 +125,26 @@ else:
         "Revenue Dashboard (รายได้)": revenue.show_view,
     }
 
+    # Logout Button (Deletes Cookie)
     if st.sidebar.button("🚪 ออกจากระบบ (Log off)"):
         st.session_state.logged_in = False
+        st.session_state.role = None
+        # Delete the cookie
+        cookie_manager.delete("user_session")
         st.rerun()
 
     st.sidebar.divider()
     
-    # --- FILE UPLOADER (New!) ---
+    # --- FILE UPLOADER ---
     st.sidebar.markdown("### 📂 Upload Data")
     uploaded_file = st.sidebar.file_uploader("Choose Excel File", type=["xlsx"])
     
     if uploaded_file:
-        # Check if we already loaded this specific file to avoid reloading on every click
         if 'last_loaded_file' not in st.session_state or st.session_state.last_loaded_file != uploaded_file.name:
             success = load_data_from_excel(uploaded_file)
             if success:
                 st.session_state.last_loaded_file = uploaded_file.name
                 st.sidebar.success("✅ Data Loaded!")
-                # Force a rerun to update graphs immediately
                 st.rerun()
         else:
             st.sidebar.info("✅ Using loaded data")
@@ -107,21 +156,3 @@ else:
     
     if selection in menu_options:
         menu_options[selection]()
-# --- DEBUG MODE: START ---
-    if st.checkbox("Show Debug Data"):
-        st.warning(f"Looking for: Year='{sel_year}', Month='{sel_month}'")
-        if 'df_eis' in st.session_state:
-            df = st.session_state['df_eis']
-            st.write("First 5 rows of your Excel data:")
-            st.write(df.head())
-            st.write("Column Names found:", df.columns.tolist())
-            
-            # Check for matches
-            match = df[(df['Year'].astype(str) == str(sel_year)) & (df['Month'] == sel_month)]
-            if match.empty:
-                st.error("❌ No matching row found! Check for spaces in Excel.")
-            else:
-                st.success(f"✅ Found {len(match)} matching row(s)!")
-        else:
-            st.error("Data not loaded into Session State yet.")
-    # --- DEBUG MODE: END ---
