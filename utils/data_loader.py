@@ -2,35 +2,30 @@ import streamlit as st
 import pandas as pd
 import os
 
-# Define a fixed path where the file will be saved
 DATA_FOLDER = "data"
 DATA_FILE = os.path.join(DATA_FOLDER, "otep_data_saved.xlsx")
 
 def save_and_load_excel(uploaded_file):
-    """Saves the uploaded file to disk, then loads it."""
     try:
         if not os.path.exists(DATA_FOLDER):
             os.makedirs(DATA_FOLDER)
-            
         with open(DATA_FILE, "wb") as f:
             f.write(uploaded_file.getbuffer())
-            
         return load_from_disk()
     except Exception as e:
         st.error(f"Error saving file: {e}")
         return False
 
 def load_from_disk():
-    """Checks if a saved file exists on disk and loads it."""
     if not os.path.exists(DATA_FILE):
         return False
         
     try:
-        # Read standard sheets
+        # Load Standard Sheets
         df_eis = pd.read_excel(DATA_FILE, sheet_name="EIS_Data")
         df_rev = pd.read_excel(DATA_FILE, sheet_name="Revenue_Data")
         
-        # Read Admin_Data
+        # Load Admin
         try:
             df_admin = pd.read_excel(DATA_FILE, sheet_name="Admin_Data")
             df_admin['Year'] = df_admin['Year'].astype(str)
@@ -38,7 +33,7 @@ def load_from_disk():
         except:
             st.session_state['df_admin'] = pd.DataFrame()
 
-        # Read Audit_Data (NEW)
+        # Load Audit
         try:
             df_audit = pd.read_excel(DATA_FILE, sheet_name="Audit_Data")
             df_audit['Year'] = df_audit['Year'].astype(str)
@@ -46,7 +41,14 @@ def load_from_disk():
         except:
             st.session_state['df_audit'] = pd.DataFrame()
 
-        # Ensure 'Year' is treated as text
+        # Load Legal (NEW)
+        try:
+            df_legal = pd.read_excel(DATA_FILE, sheet_name="Legal_Data")
+            df_legal['Year'] = df_legal['Year'].astype(str)
+            st.session_state['df_legal'] = df_legal
+        except:
+            st.session_state['df_legal'] = pd.DataFrame()
+
         df_eis['Year'] = df_eis['Year'].astype(str)
         df_rev['Year'] = df_rev['Year'].astype(str)
         
@@ -58,7 +60,7 @@ def load_from_disk():
         return False
 
 def get_dashboard_data(year_str, month_str):
-    """Retrieves standard EIS/Revenue data."""
+    # Standard EIS/Revenue logic (unchanged)
     data = {
         "cpk": {"total": "0", "new": "0", "resign": "0", "apply_vals": [0,0], "resign_vals": [0,0,0,0], "gender": [50,50], "age": [0,0,0,0]},
         "cps": {"total": "0", "new": "0", "resign": "0", "apply_vals": [0,0], "resign_vals": [0,0,0,0], "gender": [50,50], "age": [0,0,0,0]},
@@ -68,13 +70,11 @@ def get_dashboard_data(year_str, month_str):
 
     if 'df_eis' not in st.session_state or 'df_rev' not in st.session_state:
         success = load_from_disk()
-        if not success:
-            return data
+        if not success: return data
 
     df_eis = st.session_state['df_eis']
     df_rev = st.session_state['df_rev']
 
-    # EIS Logic
     if not df_eis.empty:
         row = df_eis[(df_eis['Year'] == str(year_str)) & (df_eis['Month'] == month_str)]
         if not row.empty:
@@ -98,7 +98,6 @@ def get_dashboard_data(year_str, month_str):
             data['finance']['cpk_trend'] = [paid_cpk - 2 + (i*0.2) for i in range(12)]
             data['finance']['cps_trend'] = [paid_cps - 2 + (i*0.2) for i in range(12)]
 
-    # Revenue Logic
     if not df_rev.empty:
         row = df_rev[(df_rev['Year'] == str(year_str)) & (df_rev['Month'] == month_str)]
         if not row.empty:
@@ -106,7 +105,6 @@ def get_dashboard_data(year_str, month_str):
             data['revenue']['total'] = f"{float(r['Rev_Total_Million']):.2f}"
             data['revenue']['users'] = f"{int(r['Users_Total']):,}"
             data['revenue']['avg'] = f"{int(r['Avg_Rev_Per_Head']):,}"
-            
             reg, att = int(r['Registered_Count']), int(r['Attended_Count'])
             data['revenue']['checkup_stats'] = [int(r['Province_Count']), int(r['Unit_Count']), reg, att]
             data['revenue']['checkup_rate'] = att / reg if reg > 0 else 0
