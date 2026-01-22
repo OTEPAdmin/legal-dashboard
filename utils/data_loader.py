@@ -43,9 +43,10 @@ def load_from_disk():
         st.session_state['df_finance'] = load_sheet("Finance_Data")
         st.session_state['df_treasury'] = load_sheet("Treasury_Data")
         st.session_state['df_welfare'] = load_sheet("Welfare_Data")
-        
-        # NEW: Dorm Data
         st.session_state['df_dorm'] = load_sheet("Dorm_Data")
+        
+        # NEW: Procurement Data
+        st.session_state['df_procure'] = load_sheet("Procure_Data")
 
         return True
     except Exception as e:
@@ -53,7 +54,6 @@ def load_from_disk():
         return False
 
 def get_dashboard_data(year_str, month_str):
-    # Standard dummy logic for old components
     data = {
         "cpk": {"total": "0", "new": "0", "resign": "0", "apply_vals": [0,0], "resign_vals": [0,0,0,0], "gender": [50,50], "age": [0,0,0,0]},
         "cps": {"total": "0", "new": "0", "resign": "0", "apply_vals": [0,0], "resign_vals": [0,0,0,0], "gender": [50,50], "age": [0,0,0,0]},
