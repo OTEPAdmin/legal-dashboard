@@ -8,8 +8,8 @@ from utils.data_loader import save_and_load_excel, load_from_disk
 from utils import auth
 import extra_streamlit_components as stx
 
-# Import Views (Removed 'revenue' import since it was deleted)
-from views import eis, admin, user_management, audit, legal, hospital, strategy, finance, treasury
+# Import Views (Added 'welfare')
+from views import eis, admin, user_management, audit, legal, hospital, strategy, finance, treasury, welfare
 
 # 1. CONFIGURATION
 st.set_page_config(page_title="ระบบศูนย์ข้อมูลกลาง สกสค.", layout="wide", page_icon="🏛️")
@@ -82,13 +82,14 @@ else:
     st.sidebar.title(f"👤 {st.session_state.username}")
     st.sidebar.write(f"Role: **{st.session_state.role}**")
     
-    # Updated Menu Options (Thai Only)
+    # Updated Menu Options
     menu_options = {
         "บทสรุปผู้บริหาร": eis.show_view,
         "สำนักการคลัง": treasury.show_view,
         "ภาพรวมฐานะการเงิน": finance.show_view,
         "กลุ่มนโยบายและยุทธศาสตร์": strategy.show_view,
         "โรงพยาบาล": hospital.show_view,
+        "สวัสดิการ": welfare.show_view, # NEW ITEM
         "สำนักอำนวยการ": admin.show_view,
         "สำนักตรวจสอบภายใน": audit.show_view,
         "สำนักนิติการ": legal.show_view,
