@@ -42,9 +42,10 @@ def load_from_disk():
         st.session_state['df_eis_extra'] = load_sheet("EIS_Extra")
         st.session_state['df_strategy'] = load_sheet("Strategy_Data")
         st.session_state['df_finance'] = load_sheet("Finance_Data")
-        
-        # NEW: Treasury Data
         st.session_state['df_treasury'] = load_sheet("Treasury_Data")
+        
+        # NEW: Welfare Data
+        st.session_state['df_welfare'] = load_sheet("Welfare_Data")
 
         df_eis['Year'] = df_eis['Year'].astype(str)
         df_rev['Year'] = df_rev['Year'].astype(str)
