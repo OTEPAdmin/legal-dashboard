@@ -8,8 +8,8 @@ from utils.data_loader import save_and_load_excel, load_from_disk
 from utils import auth
 import extra_streamlit_components as stx
 
-# Import Views (Added Strategy)
-from views import eis, revenue, admin, user_management, audit, legal, hospital, strategy
+# Import Views (Added Finance)
+from views import eis, revenue, admin, user_management, audit, legal, hospital, strategy, finance
 
 # 1. CONFIGURATION
 st.set_page_config(page_title="ระบบศูนย์ข้อมูลกลาง สกสค.", layout="wide", page_icon="🏛️")
@@ -84,7 +84,8 @@ else:
     
     menu_options = {
         "บทสรุปผู้บริหาร": eis.show_view,
-        "กลุ่มนโยบายและยุทธศาสตร์ (Policy & Strategy)": strategy.show_view, # NEW ITEM
+        "ภาพรวมฐานะการเงิน (Financial Overview)": finance.show_view, # NEW ITEM
+        "กลุ่มนโยบายและยุทธศาสตร์ (Policy & Strategy)": strategy.show_view,
         "Revenue Dashboard (รายได้)": revenue.show_view,
         "โรงพยาบาล (Hospital/Medical)": hospital.show_view,
         "สำนักอำนวยการ (Director's Office)": admin.show_view,
