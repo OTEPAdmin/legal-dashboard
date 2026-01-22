@@ -41,13 +41,21 @@ def load_from_disk():
         except:
             st.session_state['df_audit'] = pd.DataFrame()
 
-        # Load Legal (NEW)
+        # Load Legal
         try:
             df_legal = pd.read_excel(DATA_FILE, sheet_name="Legal_Data")
             df_legal['Year'] = df_legal['Year'].astype(str)
             st.session_state['df_legal'] = df_legal
         except:
             st.session_state['df_legal'] = pd.DataFrame()
+
+        # Load Hospital (NEW)
+        try:
+            df_hosp = pd.read_excel(DATA_FILE, sheet_name="Hospital_Data")
+            df_hosp['Year'] = df_hosp['Year'].astype(str)
+            st.session_state['df_hospital'] = df_hosp
+        except:
+            st.session_state['df_hospital'] = pd.DataFrame()
 
         df_eis['Year'] = df_eis['Year'].astype(str)
         df_rev['Year'] = df_rev['Year'].astype(str)
