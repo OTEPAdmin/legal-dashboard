@@ -6,6 +6,7 @@ import time
 from utils.styles import load_css
 from utils.data_loader import save_and_load_excel, load_from_disk
 from utils import auth
+from utils import email_service # Import Email Service
 import extra_streamlit_components as stx
 
 # Import Views
@@ -22,8 +23,16 @@ if "logged_in" not in st.session_state:
     st.session_state.role = None
     st.session_state.username = ""
     st.session_state.allowed_views = [] 
+    
+# MFA States
+if "login_stage" not in st.session_state:
+    st.session_state.login_stage = "credentials" # options: 'credentials', 'otp'
+if "temp_user_data" not in st.session_state:
+    st.session_state.temp_user_data = {}
+if "otp_secret" not in st.session_state:
+    st.session_state.otp_secret = ""
 
-# Auto-login
+# Auto-login (Cookie bypasses MFA for convenience if cookie exists)
 if not st.session_state.logged_in:
     try:
         cookie_user = cookie_manager.get(cookie="user_session")
@@ -35,9 +44,8 @@ if not st.session_state.logged_in:
                 st.session_state.role = user_data["role"]
                 st.session_state.username = user_data["name"]
                 st.session_state.allowed_views = user_data.get("allowed_views", [])
-                if st.session_state.logged_in:
-                    time.sleep(0.1)
-                    st.rerun()
+                time.sleep(0.1)
+                st.rerun()
     except Exception as e:
         print(f"Cookie read error: {e}")
 
@@ -60,24 +68,81 @@ def login_page():
     
     c1, c2, c3 = st.columns([1, 1.2, 1])
     with c2:
-        st.caption("⚠️ **ชื่อผู้ใช้และรหัสผ่านต้องระบุตัวพิมพ์เล็ก-ใหญ่ให้ถูกต้อง** (Case Sensitive)")
-        user = st.text_input("ชื่อผู้ใช้ (Username)")
-        pw = st.text_input("รหัสผ่าน (Password)", type="password")
-        remember = st.checkbox("จำรหัสผ่านไว้ 10 วัน (Remember me 10 days)")
-        
-        if st.button("เข้าสู่ระบบ (Sign In)", use_container_width=True):
-            user_data = auth.check_login(user, pw)
-            if user_data:
-                st.session_state.logged_in = True
-                st.session_state.role = user_data["role"]
-                st.session_state.username = user_data["name"]
-                st.session_state.allowed_views = user_data.get("allowed_views", [])
+        # --- STAGE 1: USERNAME / PASSWORD ---
+        if st.session_state.login_stage == "credentials":
+            st.caption("⚠️ **กรุณาเข้าสู่ระบบด้วยรหัสผ่าน**")
+            user = st.text_input("ชื่อผู้ใช้ (Username)")
+            pw = st.text_input("รหัสผ่าน (Password)", type="password")
+            remember = st.checkbox("จำรหัสผ่านไว้ 10 วัน (Remember me)")
+            
+            if st.button("ถัดไป (Next)", use_container_width=True):
+                # 1. Verify Password
+                user_data = auth.check_credentials(user, pw)
                 
-                if remember:
-                    expires = datetime.datetime.now() + datetime.timedelta(days=10)
-                    cookie_manager.set("user_session", user, expires_at=expires)
-                st.rerun()
-            else: st.error("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+                if user_data:
+                    # 2. Generate OTP
+                    otp = email_service.generate_otp()
+                    user_email = user_data.get('email', '')
+                    
+                    if not user_email or "@" not in user_email:
+                        st.error("❌ บัญชีนี้ยังไม่ได้ระบุอีเมล กรุณาติดต่อ Admin")
+                    else:
+                        # 3. Send Email
+                        success, msg = email_service.send_otp_email(user_email, otp)
+                        
+                        if success:
+                            # 4. Save State & Move to Stage 2
+                            st.session_state.temp_user_data = user_data
+                            st.session_state.temp_user_data['remember'] = remember # Store check box
+                            st.session_state.otp_secret = otp
+                            st.session_state.login_stage = "otp"
+                            st.success("✅ OTP ถูกส่งไปยังอีเมลของคุณแล้ว")
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            # If email fails (e.g. testing mode), show OTP in warning for now (REMOVE IN PRODUCTION)
+                            st.warning(f"{msg}")
+                            # For Testing without SMTP, allow moving forward:
+                            st.session_state.temp_user_data = user_data
+                            st.session_state.temp_user_data['remember'] = remember
+                            st.session_state.otp_secret = otp
+                            st.session_state.login_stage = "otp"
+                            time.sleep(2)
+                            st.rerun()
+                else:
+                    st.error("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+
+        # --- STAGE 2: OTP VERIFICATION ---
+        elif st.session_state.login_stage == "otp":
+            st.info(f"📧 กรุณากรอกรหัส 6 หลักที่ส่งไปยัง {st.session_state.temp_user_data.get('email')}")
+            
+            otp_input = st.text_input("รหัส OTP (Check Email or Console)", max_chars=6)
+            
+            c_back, c_conf = st.columns(2)
+            with c_back:
+                if st.button("ย้อนกลับ", use_container_width=True):
+                    st.session_state.login_stage = "credentials"
+                    st.rerun()
+            with c_conf:
+                if st.button("ยืนยัน (Verify)", type="primary", use_container_width=True):
+                    if otp_input == st.session_state.otp_secret:
+                        # LOGIN SUCCESSFUL
+                        user_data = st.session_state.temp_user_data
+                        st.session_state.logged_in = True
+                        st.session_state.role = user_data["role"]
+                        st.session_state.username = user_data["name"]
+                        st.session_state.allowed_views = user_data.get("allowed_views", [])
+                        
+                        if user_data.get('remember'):
+                            expires = datetime.datetime.now() + datetime.timedelta(days=10)
+                            cookie_manager.set("user_session", user_data['username'], expires_at=expires)
+                        
+                        # Cleanup
+                        st.session_state.login_stage = "credentials"
+                        st.session_state.otp_secret = ""
+                        st.rerun()
+                    else:
+                        st.error("❌ รหัส OTP ไม่ถูกต้อง")
 
 # 4. MAIN ROUTER
 if not st.session_state.logged_in:
@@ -86,7 +151,6 @@ else:
     st.sidebar.title(f"👤 {st.session_state.username}")
     st.sidebar.caption(f"Role: {st.session_state.role}")
     
-    # --- MASTER MENU DEFINITION ---
     all_dashboards = {
         "บทสรุปผู้บริหาร": eis.show_view,
         "สำนักการคลัง": treasury.show_view,
@@ -101,7 +165,6 @@ else:
         "สำนักนิติการ": legal.show_view,
     }
 
-    # --- PRIVILEGE LOGIC ---
     menu_options = {}
 
     if st.session_state.role in ["Admin", "Superuser"]:
@@ -114,33 +177,22 @@ else:
     if st.session_state.role == "Admin":
         menu_options["⚙️ จัดการผู้ใช้งาน"] = user_management.show_view
 
-    # --- LOGOUT LOGIC (FIXED) ---
     if st.sidebar.button("🚪 ออกจากระบบ (Log off)"):
-        # 1. Clear State
         st.session_state.logged_in = False
         st.session_state.role = None
-        st.session_state.username = ""
         st.session_state.allowed_views = []
-        
-        # 2. Delete Cookie safely
-        try:
-            cookie_manager.delete("user_session")
-        except:
-            pass # Ignore errors if cookie missing
-            
-        # 3. Wait slightly to prevent race-condition errors
+        st.session_state.login_stage = "credentials" # Reset login stage
+        try: cookie_manager.delete("user_session")
+        except: pass
         time.sleep(0.1) 
         st.rerun()
 
     st.sidebar.divider()
     
-    # Upload Logic (Only Admin)
     if st.session_state.role == "Admin":
         st.sidebar.markdown("### 📂 Upload Data")
-        
         if 'df_eis' not in st.session_state:
             if load_from_disk(): st.session_state['data_loaded'] = True
-        
         uploaded_file = st.sidebar.file_uploader("Choose Excel File", type=["xlsx"])
         if uploaded_file:
             if 'last_loaded_file' not in st.session_state or st.session_state.last_loaded_file != uploaded_file.name:
@@ -150,20 +202,16 @@ else:
                     st.sidebar.success("✅ New Data Saved!")
                     time.sleep(1)
                     st.rerun()
-        
         if st.session_state.get('data_loaded', False): st.sidebar.info("✅ Data Source: Active")
         else: st.sidebar.warning("⚠️ No data found. Please upload.")
-        
         st.sidebar.divider()
     else:
         if 'df_eis' not in st.session_state:
             load_from_disk()
 
-    # --- RENDER MENU ---
     if menu_options:
         selection = st.sidebar.radio("เลือกเมนู:", list(menu_options.keys()))
-        if selection in menu_options: 
-            menu_options[selection]()
+        if selection in menu_options: menu_options[selection]()
     else:
         st.sidebar.warning("🚫 No dashboards assigned.")
         st.info("คุณไม่ได้รับสิทธิ์ในการเข้าถึงแดชบอร์ดใดๆ กรุณาติดต่อผู้ดูแลระบบ")
