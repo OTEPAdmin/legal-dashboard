@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd  # <--- Moved to top (FIX)
 from utils.styles import render_header
-from utils.data_mock import get_dashboard_data
+from utils.data_loader import get_dashboard_data
 
 def show_view():
     render_header("📊 บทสรุปผู้บริหาร (Executive Summary)", border_color="#607D8B")
