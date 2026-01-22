@@ -9,18 +9,35 @@ def show_view():
     # Load current users
     users = auth.load_users()
 
-    # --- TABS ---
-    tab1, tab2, tab3 = st.tabs(["📋 รายชื่อผู้ใช้ (User List)", "➕ เพิ่มผู้ใช้ใหม่ (Add User)", "🔑 เปลี่ยนรหัสผ่าน (Change Password)"])
+    # Define the list of available dashboards (Must match keys in app.py)
+    DASHBOARD_OPTIONS = [
+        "บทสรุปผู้บริหาร",
+        "สำนักการคลัง",
+        "กองคลัง-พัสดุ",
+        "ภาพรวมฐานะการเงิน",
+        "กลุ่มนโยบายและยุทธศาสตร์",
+        "โรงพยาบาล",
+        "สวัสดิการ",
+        "หอพัก สกสค.",
+        "สำนักอำนวยการ",
+        "สำนักตรวจสอบภายใน",
+        "สำนักนิติการ"
+    ]
 
-    # TAB 1: LIST USERS
+    tab1, tab2, tab3 = st.tabs(["📋 รายชื่อผู้ใช้", "➕ เพิ่มผู้ใช้ใหม่", "🔑 เปลี่ยนรหัสผ่าน"])
+
+    # TAB 1: USER LIST
     with tab1:
-        # Convert JSON to DataFrame for display
         data = []
         for u, details in users.items():
+            # Format allowed views for display
+            views_str = "All" if details['role'] in ['Admin', 'Superuser'] else ", ".join(details.get('allowed_views', []))
+            
             data.append({
                 "Username": u,
                 "Name": details['name'],
-                "Role": details['role']
+                "Role": details['role'],
+                "Assigned Dashboards": views_str
             })
         
         df = pd.DataFrame(data)
@@ -30,10 +47,10 @@ def show_view():
         st.caption("🗑️ **Delete User**")
         c1, c2 = st.columns([3, 1])
         with c1:
-            user_to_del = st.selectbox("เลือกผู้ใช้ที่ต้องการลบ (Select User to Delete)", list(users.keys()))
+            user_to_del = st.selectbox("เลือกผู้ใช้ที่ต้องการลบ", list(users.keys()))
         with c2:
-            st.write("") # Spacer
-            st.write("") # Spacer
+            st.write("") 
+            st.write("") 
             if st.button("ลบผู้ใช้ (Delete)", type="primary"):
                 success, msg = auth.delete_user(user_to_del)
                 if success:
@@ -51,14 +68,20 @@ def show_view():
             new_name = st.text_input("Display Name (ชื่อที่แสดง)", placeholder="e.g. Somchai Jai-dee")
         with col2:
             new_pass = st.text_input("Password (รหัสผ่าน)", type="password")
-            new_role = st.selectbox("Role (สิทธิ์)", ["User", "Admin"])
+            new_role = st.selectbox("Role (สิทธิ์)", ["User", "Superuser", "Admin"])
+        
+        # Show Dashboard Selector ONLY if Role is 'User'
+        selected_views = []
+        if new_role == "User":
+            st.markdown("**Select Assigned Dashboards (เลือกแดชบอร์ดที่เข้าถึงได้):**")
+            selected_views = st.multiselect("Dashboards", DASHBOARD_OPTIONS, default=DASHBOARD_OPTIONS[:1])
         
         if st.button("บันทึก (Create Account)"):
             if new_user and new_pass and new_name:
-                success, msg = auth.add_user(new_user, new_pass, new_role, new_name)
+                success, msg = auth.add_user(new_user, new_pass, new_role, new_name, selected_views)
                 if success:
                     st.success(msg)
-                    st.rerun() # Refresh to update list
+                    st.rerun()
                 else:
                     st.warning(msg)
             else:
@@ -69,11 +92,11 @@ def show_view():
         st.markdown("#### เปลี่ยนรหัสผ่าน")
         col1, col2 = st.columns(2)
         with col1:
-            target_user = st.selectbox("เลือกผู้ใช้ (Select User)", list(users.keys()), key="pwd_user_select")
+            target_user = st.selectbox("เลือกผู้ใช้", list(users.keys()), key="pwd_user_select")
         with col2:
-            new_pwd = st.text_input("รหัสผ่านใหม่ (New Password)", type="password", key="pwd_new")
+            new_pwd = st.text_input("รหัสผ่านใหม่", type="password", key="pwd_new")
         
-        if st.button("อัปเดตรหัสผ่าน (Update Password)"):
+        if st.button("อัปเดตรหัสผ่าน"):
             if new_pwd:
                 success, msg = auth.update_password(target_user, new_pwd)
                 if success:
