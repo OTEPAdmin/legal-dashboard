@@ -21,7 +21,7 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.role = None
     st.session_state.username = ""
-    st.session_state.allowed_views = [] # New State for privileges
+    st.session_state.allowed_views = [] 
 
 # Auto-login
 if not st.session_state.logged_in:
@@ -87,7 +87,6 @@ else:
     st.sidebar.caption(f"Role: {st.session_state.role}")
     
     # --- MASTER MENU DEFINITION ---
-    # Dictionary of all possible dashboards
     all_dashboards = {
         "บทสรุปผู้บริหาร": eis.show_view,
         "สำนักการคลัง": treasury.show_view,
@@ -105,36 +104,40 @@ else:
     # --- PRIVILEGE LOGIC ---
     menu_options = {}
 
-    # Logic 1: Dashboards Visibility
     if st.session_state.role in ["Admin", "Superuser"]:
-        # See Everything
         menu_options = all_dashboards
     else:
-        # General User: See only assigned views
         for name, view_func in all_dashboards.items():
             if name in st.session_state.allowed_views:
                 menu_options[name] = view_func
 
-    # Logic 2: Admin Functions (Only for "Admin", NOT "Superuser")
     if st.session_state.role == "Admin":
         menu_options["⚙️ จัดการผู้ใช้งาน"] = user_management.show_view
 
-    # Logout Button
+    # --- LOGOUT LOGIC (FIXED) ---
     if st.sidebar.button("🚪 ออกจากระบบ (Log off)"):
+        # 1. Clear State
         st.session_state.logged_in = False
         st.session_state.role = None
+        st.session_state.username = ""
         st.session_state.allowed_views = []
-        cookie_manager.delete("user_session")
+        
+        # 2. Delete Cookie safely
+        try:
+            cookie_manager.delete("user_session")
+        except:
+            pass # Ignore errors if cookie missing
+            
+        # 3. Wait slightly to prevent race-condition errors
+        time.sleep(0.1) 
         st.rerun()
 
     st.sidebar.divider()
     
-    # Logic 3: Upload Function (Only for "Admin")
-    # Superuser sees all dashboards but CANNOT upload
+    # Upload Logic (Only Admin)
     if st.session_state.role == "Admin":
         st.sidebar.markdown("### 📂 Upload Data")
         
-        # Load logic (keep existing data if no new upload)
         if 'df_eis' not in st.session_state:
             if load_from_disk(): st.session_state['data_loaded'] = True
         
@@ -152,9 +155,7 @@ else:
         else: st.sidebar.warning("⚠️ No data found. Please upload.")
         
         st.sidebar.divider()
-    
     else:
-        # For Non-Admins, just ensure data is loaded from disk silently
         if 'df_eis' not in st.session_state:
             load_from_disk()
 
