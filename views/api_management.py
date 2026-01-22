@@ -39,21 +39,22 @@ def show_view():
 
     st.info("หน้านี้สำหรับสร้าง API Key เพื่อให้ระบบภายนอก (Mobile App, Web, ERP) สามารถดึงข้อมูลจาก Dashboard ไปใช้งานได้")
 
-    # --- SECTION 1: CREATE KEY ---
-    with st.expander("➕ สร้าง API Key ใหม่ (Generate Key)", expanded=True):
-        c1, c2 = st.columns([3, 1])
-        with c1:
-            system_name = st.text_input("ชื่อระบบที่เชื่อมต่อ (System Name)", placeholder="e.g. Mobile App, ERP, Website")
-        with c2:
-            st.write("") 
-            st.write("") 
-            if st.button("Generate Key", type="primary", use_container_width=True):
-                if system_name:
-                    new_key = generate_new_key(system_name)
-                    st.success(f"✅ สร้างสำเร็จ! กรุณาคัดลอก Key นี้ทันที: `{new_key}`")
-                    st.rerun()
-                else:
-                    st.warning("กรุณาระบุชื่อระบบ")
+    st.markdown("### ➕ สร้าง API Key ใหม่ (Generate Key)")
+    
+    # --- SECTION 1: CREATE KEY (No Expander) ---
+    c1, c2 = st.columns([3, 1])
+    with c1:
+        system_name = st.text_input("ชื่อระบบที่เชื่อมต่อ (System Name)", placeholder="e.g. Mobile App, ERP, Website")
+    with c2:
+        st.write("") 
+        st.write("") 
+        if st.button("Generate Key", type="primary", use_container_width=True):
+            if system_name:
+                new_key = generate_new_key(system_name)
+                st.success(f"✅ สร้างสำเร็จ! กรุณาคัดลอก Key นี้ทันที: `{new_key}`")
+                st.rerun()
+            else:
+                st.warning("กรุณาระบุชื่อระบบ")
 
     st.write("---")
 
