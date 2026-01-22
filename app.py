@@ -4,9 +4,9 @@ import base64
 import datetime
 import time
 from utils.styles import load_css
-from utils.data_loader import load_data_from_excel
+from utils.data_loader import save_and_load_excel, load_from_disk # Import new functions
 
-# Import Auth System (New!)
+# Import Auth System
 from utils import auth
 
 # Import Cookie Manager
@@ -33,7 +33,6 @@ if not st.session_state.logged_in:
     try:
         cookie_user = cookie_manager.get(cookie="user_session")
         if cookie_user:
-            # Validate cookie against actual user database
             users = auth.load_users()
             if cookie_user in users:
                 user_data = users[cookie_user]
@@ -93,7 +92,6 @@ def login_page():
         remember = st.checkbox("จำรหัสผ่านไว้ 10 วัน (Remember me 10 days)")
         
         if st.button("เข้าสู่ระบบ (Sign In)", use_container_width=True):
-            # --- NEW AUTH LOGIC (Uses utils/auth.py) ---
             user_data = auth.check_login(user, pw)
             
             if user_data:
@@ -117,18 +115,15 @@ else:
     st.sidebar.title(f"👤 {st.session_state.username}")
     st.sidebar.write(f"Role: **{st.session_state.role}**")
     
-    # Define Base Menu
     menu_options = {
         "EIS Dashboard (บทสรุปผู้บริหาร)": eis.show_view,
         "Revenue Dashboard (รายได้)": revenue.show_view,
         "สำนักอำนวยการ (Director's Office)": admin.show_view,
     }
 
-    # Add Admin-Only Menu
     if st.session_state.role == "Admin":
         menu_options["⚙️ User Management (จัดการผู้ใช้)"] = user_management.show_view
 
-    # Logout
     if st.sidebar.button("🚪 ออกจากระบบ (Log off)"):
         st.session_state.logged_in = False
         st.session_state.role = None
@@ -137,21 +132,34 @@ else:
 
     st.sidebar.divider()
     
-    # --- FILE UPLOADER ---
+    # --- FILE UPLOADER LOGIC (Persistence Added) ---
     st.sidebar.markdown("### 📂 Upload Data")
+    
+    # 1. AUTO-LOAD: Try to load existing file from disk first
+    if 'df_eis' not in st.session_state:
+        success = load_from_disk()
+        if success:
+            st.session_state['data_loaded'] = True
+    
+    # 2. UPLOADER: Allows overwriting the existing file
     uploaded_file = st.sidebar.file_uploader("Choose Excel File", type=["xlsx"])
     
     if uploaded_file:
+        # Save and Load new file
         if 'last_loaded_file' not in st.session_state or st.session_state.last_loaded_file != uploaded_file.name:
-            success = load_data_from_excel(uploaded_file)
+            success = save_and_load_excel(uploaded_file)
             if success:
                 st.session_state.last_loaded_file = uploaded_file.name
-                st.sidebar.success("✅ Data Loaded!")
+                st.session_state['data_loaded'] = True
+                st.sidebar.success("✅ New Data Saved!")
+                time.sleep(1)
                 st.rerun()
-        else:
-            st.sidebar.info("✅ Using loaded data")
+    
+    # Status Message
+    if st.session_state.get('data_loaded', False):
+         st.sidebar.info("✅ Data Source: Active")
     else:
-        st.sidebar.warning("⚠️ Please upload data")
+         st.sidebar.warning("⚠️ No data found. Please upload.")
 
     st.sidebar.divider()
     selection = st.sidebar.radio("เลือกเมนู:", list(menu_options.keys()))
