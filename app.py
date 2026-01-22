@@ -8,7 +8,7 @@ from utils.data_loader import save_and_load_excel, load_from_disk
 from utils import auth
 import extra_streamlit_components as stx
 
-# Import Views (Added hospital)
+# Import Views
 from views import eis, revenue, admin, user_management, audit, legal, hospital
 
 # 1. CONFIGURATION
@@ -83,9 +83,9 @@ else:
     st.sidebar.write(f"Role: **{st.session_state.role}**")
     
     menu_options = {
-        "EIS Dashboard (บทสรุปผู้บริหาร)": eis.show_view,
+        "บทสรุปผู้บริหาร": eis.show_view, # CHANGED HERE
         "Revenue Dashboard (รายได้)": revenue.show_view,
-        "โรงพยาบาล (Hospital/Medical)": hospital.show_view, # NEW ITEM
+        "โรงพยาบาล (Hospital/Medical)": hospital.show_view,
         "สำนักอำนวยการ (Director's Office)": admin.show_view,
         "สำนักตรวจสอบภายใน (Internal Audit)": audit.show_view,
         "สำนักนิติการ (Legal Affairs)": legal.show_view,
