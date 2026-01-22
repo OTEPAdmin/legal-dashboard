@@ -8,7 +8,7 @@ from utils.data_loader import save_and_load_excel, load_from_disk
 from utils import auth
 import extra_streamlit_components as stx
 
-# Import Views (Added 'procurement')
+# Import Views
 from views import eis, admin, user_management, audit, legal, hospital, strategy, finance, treasury, welfare, dorm, procurement
 
 # 1. CONFIGURATION
@@ -21,6 +21,7 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.role = None
     st.session_state.username = ""
+    st.session_state.allowed_views = [] # New State for privileges
 
 # Auto-login
 if not st.session_state.logged_in:
@@ -33,6 +34,7 @@ if not st.session_state.logged_in:
                 st.session_state.logged_in = True
                 st.session_state.role = user_data["role"]
                 st.session_state.username = user_data["name"]
+                st.session_state.allowed_views = user_data.get("allowed_views", [])
                 if st.session_state.logged_in:
                     time.sleep(0.1)
                     st.rerun()
@@ -69,6 +71,8 @@ def login_page():
                 st.session_state.logged_in = True
                 st.session_state.role = user_data["role"]
                 st.session_state.username = user_data["name"]
+                st.session_state.allowed_views = user_data.get("allowed_views", [])
+                
                 if remember:
                     expires = datetime.datetime.now() + datetime.timedelta(days=10)
                     cookie_manager.set("user_session", user, expires_at=expires)
@@ -80,13 +84,14 @@ if not st.session_state.logged_in:
     login_page()
 else:
     st.sidebar.title(f"👤 {st.session_state.username}")
-    st.sidebar.write(f"Role: **{st.session_state.role}**")
+    st.sidebar.caption(f"Role: {st.session_state.role}")
     
-    # Updated Menu Options
-    menu_options = {
+    # --- MASTER MENU DEFINITION ---
+    # Dictionary of all possible dashboards
+    all_dashboards = {
         "บทสรุปผู้บริหาร": eis.show_view,
         "สำนักการคลัง": treasury.show_view,
-        "กองคลัง-พัสดุ": procurement.show_view, # NEW ITEM
+        "กองคลัง-พัสดุ": procurement.show_view,
         "ภาพรวมฐานะการเงิน": finance.show_view,
         "กลุ่มนโยบายและยุทธศาสตร์": strategy.show_view,
         "โรงพยาบาล": hospital.show_view,
@@ -97,33 +102,67 @@ else:
         "สำนักนิติการ": legal.show_view,
     }
 
+    # --- PRIVILEGE LOGIC ---
+    menu_options = {}
+
+    # Logic 1: Dashboards Visibility
+    if st.session_state.role in ["Admin", "Superuser"]:
+        # See Everything
+        menu_options = all_dashboards
+    else:
+        # General User: See only assigned views
+        for name, view_func in all_dashboards.items():
+            if name in st.session_state.allowed_views:
+                menu_options[name] = view_func
+
+    # Logic 2: Admin Functions (Only for "Admin", NOT "Superuser")
     if st.session_state.role == "Admin":
         menu_options["⚙️ จัดการผู้ใช้งาน"] = user_management.show_view
 
+    # Logout Button
     if st.sidebar.button("🚪 ออกจากระบบ (Log off)"):
         st.session_state.logged_in = False
         st.session_state.role = None
+        st.session_state.allowed_views = []
         cookie_manager.delete("user_session")
         st.rerun()
 
     st.sidebar.divider()
-    st.sidebar.markdown("### 📂 Upload Data")
-    if 'df_eis' not in st.session_state:
-        if load_from_disk(): st.session_state['data_loaded'] = True
     
-    uploaded_file = st.sidebar.file_uploader("Choose Excel File", type=["xlsx"])
-    if uploaded_file:
-        if 'last_loaded_file' not in st.session_state or st.session_state.last_loaded_file != uploaded_file.name:
-            if save_and_load_excel(uploaded_file):
-                st.session_state.last_loaded_file = uploaded_file.name
-                st.session_state['data_loaded'] = True
-                st.sidebar.success("✅ New Data Saved!")
-                time.sleep(1)
-                st.rerun()
+    # Logic 3: Upload Function (Only for "Admin")
+    # Superuser sees all dashboards but CANNOT upload
+    if st.session_state.role == "Admin":
+        st.sidebar.markdown("### 📂 Upload Data")
+        
+        # Load logic (keep existing data if no new upload)
+        if 'df_eis' not in st.session_state:
+            if load_from_disk(): st.session_state['data_loaded'] = True
+        
+        uploaded_file = st.sidebar.file_uploader("Choose Excel File", type=["xlsx"])
+        if uploaded_file:
+            if 'last_loaded_file' not in st.session_state or st.session_state.last_loaded_file != uploaded_file.name:
+                if save_and_load_excel(uploaded_file):
+                    st.session_state.last_loaded_file = uploaded_file.name
+                    st.session_state['data_loaded'] = True
+                    st.sidebar.success("✅ New Data Saved!")
+                    time.sleep(1)
+                    st.rerun()
+        
+        if st.session_state.get('data_loaded', False): st.sidebar.info("✅ Data Source: Active")
+        else: st.sidebar.warning("⚠️ No data found. Please upload.")
+        
+        st.sidebar.divider()
     
-    if st.session_state.get('data_loaded', False): st.sidebar.info("✅ Data Source: Active")
-    else: st.sidebar.warning("⚠️ No data found. Please upload.")
+    else:
+        # For Non-Admins, just ensure data is loaded from disk silently
+        if 'df_eis' not in st.session_state:
+            load_from_disk()
 
-    st.sidebar.divider()
-    selection = st.sidebar.radio("เลือกเมนู:", list(menu_options.keys()))
-    if selection in menu_options: menu_options[selection]()
+    # --- RENDER MENU ---
+    if menu_options:
+        selection = st.sidebar.radio("เลือกเมนู:", list(menu_options.keys()))
+        if selection in menu_options: 
+            menu_options[selection]()
+    else:
+        st.sidebar.warning("🚫 No dashboards assigned.")
+        st.info("คุณไม่ได้รับสิทธิ์ในการเข้าถึงแดชบอร์ดใดๆ กรุณาติดต่อผู้ดูแลระบบ")
