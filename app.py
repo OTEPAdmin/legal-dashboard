@@ -17,7 +17,6 @@ st.set_page_config(page_title="ระบบศูนย์ข้อมูลก�
 load_css()
 
 # --- COOKIE MANAGER SETUP ---
-# Initialized directly to avoid caching errors
 cookie_manager = stx.CookieManager()
 
 # 2. SESSION STATE & AUTO-LOGIN CHECK
@@ -40,7 +39,6 @@ if not st.session_state.logged_in:
                 st.session_state.role = "User"
                 st.session_state.username = "General User"
             
-            # Force a rerun if login was successful
             if st.session_state.logged_in:
                 time.sleep(0.1)
                 st.rerun()
@@ -64,7 +62,7 @@ def login_page():
                 encoded = base64.b64encode(f.read()).decode()
             st.markdown(
                 f"""
-                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 10px;">
                     <img src="data:image/jpeg;base64,{encoded}" style="width: 150px; max-width: 80%; border-radius: 50%;">
                 </div>
                 """, 
@@ -75,15 +73,20 @@ def login_page():
     else:
         st.markdown("<h1 style='text-align:center; font-size: 80px;'>🏛️</h1>", unsafe_allow_html=True)
     
+    # --- NEW HEADER TEXT (No Lock, No Box) ---
+    st.markdown(
+        """
+        <h1 style='text-align: center; margin-bottom: 0px; font-weight: bold;'>ยินดีต้อนรับ</h1>
+        <h3 style='text-align: center; margin-top: 5px; margin-bottom: 30px; font-weight: normal;'>ระบบศูนย์ข้อมูลกลาง สกสค.</h3>
+        """,
+        unsafe_allow_html=True
+    )
+    
     # --- LOGIN FORM ---
-    # Adjusted column ratio to [1, 2, 1] to give the title more space
-    c1, c2, c3 = st.columns([1, 2, 1])
+    # Using [1, 1.2, 1] ratio to keep the form centered but not too wide
+    c1, c2, c3 = st.columns([1, 1.2, 1])
     with c2:
-        # Added 'white-space: nowrap;' to force single line
-        st.markdown(
-            '<div class="login-box"><h2 style="text-align: center; white-space: nowrap;">🔐 ระบบศูนย์ข้อมูลกลาง สกสค.</h2>', 
-            unsafe_allow_html=True
-        )
+        # Note: 'login-box' div removed to remove the background card style
         st.caption("⚠️ **ชื่อผู้ใช้และรหัสผ่านต้องระบุตัวพิมพ์เล็ก-ใหญ่ให้ถูกต้อง** (Case Sensitive)")
         
         user = st.text_input("ชื่อผู้ใช้ (Username)")
@@ -110,7 +113,7 @@ def login_page():
                 st.session_state.role = role_name
                 st.session_state.username = display_name
                 
-                # --- SET COOKIE IF REMEMBER CHECKED ---
+                # Set Cookie
                 if remember:
                     expires = datetime.datetime.now() + datetime.timedelta(days=10)
                     cookie_manager.set("user_session", valid_user, expires_at=expires)
@@ -118,7 +121,6 @@ def login_page():
                 st.rerun()
             else:
                 st.error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-        st.markdown('</div>', unsafe_allow_html=True)
 
 # 4. MAIN ROUTER
 if not st.session_state.logged_in:
