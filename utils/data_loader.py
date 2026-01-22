@@ -41,7 +41,9 @@ def get_dashboard_data(year_str, month_str):
 
     # 3. MATCH & FILL EIS DATA
     if not df_eis.empty:
+        # Filter safely
         row = df_eis[(df_eis['Year'] == str(year_str)) & (df_eis['Month'] == month_str)]
+        
         if not row.empty:
             r = row.iloc[0]
             data['cpk']['total'] = f"{int(r['CPK_Total']):,}"
