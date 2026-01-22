@@ -4,7 +4,7 @@ import base64
 import datetime
 import time
 from utils.styles import load_css
-from utils.data_loader import save_and_load_excel, load_from_disk # Import new functions
+from utils.data_loader import save_and_load_excel, load_from_disk
 
 # Import Auth System
 from utils import auth
@@ -12,8 +12,8 @@ from utils import auth
 # Import Cookie Manager
 import extra_streamlit_components as stx
 
-# Import Views
-from views import eis, revenue, admin, user_management
+# Import Views (Added 'audit')
+from views import eis, revenue, admin, user_management, audit
 
 # 1. CONFIGURATION
 st.set_page_config(page_title="ระบบศูนย์ข้อมูลกลาง สกสค.", layout="wide", page_icon="🏛️")
@@ -119,6 +119,7 @@ else:
         "EIS Dashboard (บทสรุปผู้บริหาร)": eis.show_view,
         "Revenue Dashboard (รายได้)": revenue.show_view,
         "สำนักอำนวยการ (Director's Office)": admin.show_view,
+        "สำนักตรวจสอบภายใน (Internal Audit)": audit.show_view, # NEW ITEM
     }
 
     if st.session_state.role == "Admin":
@@ -132,20 +133,17 @@ else:
 
     st.sidebar.divider()
     
-    # --- FILE UPLOADER LOGIC (Persistence Added) ---
+    # --- FILE UPLOADER ---
     st.sidebar.markdown("### 📂 Upload Data")
     
-    # 1. AUTO-LOAD: Try to load existing file from disk first
     if 'df_eis' not in st.session_state:
         success = load_from_disk()
         if success:
             st.session_state['data_loaded'] = True
     
-    # 2. UPLOADER: Allows overwriting the existing file
     uploaded_file = st.sidebar.file_uploader("Choose Excel File", type=["xlsx"])
     
     if uploaded_file:
-        # Save and Load new file
         if 'last_loaded_file' not in st.session_state or st.session_state.last_loaded_file != uploaded_file.name:
             success = save_and_load_excel(uploaded_file)
             if success:
@@ -155,7 +153,6 @@ else:
                 time.sleep(1)
                 st.rerun()
     
-    # Status Message
     if st.session_state.get('data_loaded', False):
          st.sidebar.info("✅ Data Source: Active")
     else:
