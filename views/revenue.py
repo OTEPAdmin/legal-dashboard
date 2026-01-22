@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 from utils.styles import render_header
-from utils.data_mock import get_dashboard_data
+from utils.data_loader import get_dashboard_data
 
 def show_view():
     render_header("รายได้ - โรงพยาบาล (Revenue)", border_color="#E91E63")
