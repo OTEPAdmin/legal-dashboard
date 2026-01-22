@@ -6,25 +6,28 @@ FILE_PATH = "users.json"
 def load_users():
     """Loads users from JSON file. Creates default if missing."""
     if not os.path.exists(FILE_PATH):
-        # Default initial users
+        # Default initial users with dummy emails (Change these to real ones to test!)
         default_users = {
             "admin": {
                 "password": "admin", 
                 "role": "Admin", 
                 "name": "Administrator",
-                "allowed_views": [] # Admin sees all
+                "email": "admin@example.com",
+                "allowed_views": []
             },
             "super": {
                 "password": "super", 
                 "role": "Superuser", 
                 "name": "Super User",
-                "allowed_views": [] # Superuser sees all dashboards
+                "email": "super@example.com",
+                "allowed_views": []
             },
             "user": {
                 "password": "user", 
                 "role": "User", 
                 "name": "General User",
-                "allowed_views": ["บทสรุปผู้บริหาร"] # Default assigned view
+                "email": "user@example.com",
+                "allowed_views": ["บทสรุปผู้บริหาร"]
             }
         }
         with open(FILE_PATH, "w", encoding='utf-8') as f:
@@ -35,19 +38,21 @@ def load_users():
         return json.load(f)
 
 def save_users(users):
-    """Saves the user dictionary to JSON."""
     with open(FILE_PATH, "w", encoding='utf-8') as f:
         json.dump(users, f, ensure_ascii=False, indent=4)
 
-def check_login(username, password):
-    """Verifies credentials."""
+def check_credentials(username, password):
+    """Verifies password only. Returns user object if valid, else None."""
     users = load_users()
     if username in users and users[username]["password"] == password:
-        return users[username]
+        # Return the whole user object (so we can get the email)
+        user_data = users[username]
+        user_data['username'] = username # Append username key for convenience
+        return user_data
     return None
 
-def add_user(username, password, role, name, allowed_views=None):
-    """Adds a new user with specific dashboard access."""
+def add_user(username, password, role, name, email, allowed_views=None):
+    """Adds a new user with email."""
     users = load_users()
     if username in users:
         return False, "⚠️ Username already exists"
@@ -56,13 +61,13 @@ def add_user(username, password, role, name, allowed_views=None):
         "password": password,
         "role": role,
         "name": name,
+        "email": email,
         "allowed_views": allowed_views if allowed_views else []
     }
     save_users(users)
     return True, "✅ User created successfully!"
 
 def update_password(username, new_password):
-    """Updates an existing user's password."""
     users = load_users()
     if username not in users:
         return False, "User not found"
@@ -72,7 +77,6 @@ def update_password(username, new_password):
     return True, "✅ Password updated!"
 
 def delete_user(username):
-    """Deletes a user."""
     users = load_users()
     if username in users:
         if username == "admin": 
