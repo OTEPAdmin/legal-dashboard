@@ -84,11 +84,11 @@ else:
     
     menu_options = {
         "บทสรุปผู้บริหาร": eis.show_view,
-        "สำนักการคลัง": treasury.show_view, # NEW ITEM
-        "ภาพรวมฐานะการเงิน": finance.show_view,
+        "สำนักการคลัง (Treasury/Finance)": treasury.show_view, # NEW ITEM
+        "ภาพรวมฐานะการเงิน (Financial Overview)": finance.show_view,
         "กลุ่มนโยบายและยุทธศาสตร์ (Policy & Strategy)": strategy.show_view,
-        "โรงพยาบาล": hospital.show_view,
-        "สำนักอำนวยการ": admin.show_view,
+        "โรงพยาบาล (Hospital/Medical)": hospital.show_view,
+        "สำนักอำนวยการ (Director's Office)": admin.show_view,
         "สำนักตรวจสอบภายใน (Internal Audit)": audit.show_view,
         "สำนักนิติการ (Legal Affairs)": legal.show_view,
     }
