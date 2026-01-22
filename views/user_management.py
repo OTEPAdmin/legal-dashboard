@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import time # Added to handle the delay
 from utils import auth
 from utils.styles import render_header
 
@@ -55,6 +56,7 @@ def show_view():
                 success, msg = auth.delete_user(user_to_del)
                 if success:
                     st.success(msg)
+                    time.sleep(1) # Wait 1s
                     st.rerun()
                 else:
                     st.error(msg)
@@ -80,8 +82,9 @@ def show_view():
             if new_user and new_pass and new_name:
                 success, msg = auth.add_user(new_user, new_pass, new_role, new_name, selected_views)
                 if success:
-                    st.success(msg)
-                    st.rerun()
+                    st.success(f"✅ บันทึกสำเร็จ: {msg}") # Explicit Success Message
+                    time.sleep(1.5) # Wait 1.5 seconds so user sees the message
+                    st.rerun() # Then refresh to update the list
                 else:
                     st.warning(msg)
             else:
