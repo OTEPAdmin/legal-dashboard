@@ -8,8 +8,8 @@ from utils.data_loader import save_and_load_excel, load_from_disk
 from utils import auth
 import extra_streamlit_components as stx
 
-# Import Views (Added 'dorm')
-from views import eis, admin, user_management, audit, legal, hospital, strategy, finance, treasury, welfare, dorm
+# Import Views (Added 'procurement')
+from views import eis, admin, user_management, audit, legal, hospital, strategy, finance, treasury, welfare, dorm, procurement
 
 # 1. CONFIGURATION
 st.set_page_config(page_title="ระบบศูนย์ข้อมูลกลาง สกสค.", layout="wide", page_icon="🏛️")
@@ -86,11 +86,12 @@ else:
     menu_options = {
         "บทสรุปผู้บริหาร": eis.show_view,
         "สำนักการคลัง": treasury.show_view,
+        "กองคลัง-พัสดุ": procurement.show_view, # NEW ITEM
         "ภาพรวมฐานะการเงิน": finance.show_view,
         "กลุ่มนโยบายและยุทธศาสตร์": strategy.show_view,
         "โรงพยาบาล": hospital.show_view,
         "สวัสดิการ": welfare.show_view,
-        "หอพัก สกสค.": dorm.show_view, # NEW ITEM
+        "หอพัก สกสค.": dorm.show_view,
         "สำนักอำนวยการ": admin.show_view,
         "สำนักตรวจสอบภายใน": audit.show_view,
         "สำนักนิติการ": legal.show_view,
