@@ -107,3 +107,21 @@ else:
     
     if selection in menu_options:
         menu_options[selection]()
+# --- DEBUG MODE: START ---
+    if st.checkbox("Show Debug Data"):
+        st.warning(f"Looking for: Year='{sel_year}', Month='{sel_month}'")
+        if 'df_eis' in st.session_state:
+            df = st.session_state['df_eis']
+            st.write("First 5 rows of your Excel data:")
+            st.write(df.head())
+            st.write("Column Names found:", df.columns.tolist())
+            
+            # Check for matches
+            match = df[(df['Year'].astype(str) == str(sel_year)) & (df['Month'] == sel_month)]
+            if match.empty:
+                st.error("❌ No matching row found! Check for spaces in Excel.")
+            else:
+                st.success(f"✅ Found {len(match)} matching row(s)!")
+        else:
+            st.error("Data not loaded into Session State yet.")
+    # --- DEBUG MODE: END ---
