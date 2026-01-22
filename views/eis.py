@@ -2,29 +2,30 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 from utils.styles import render_header
-# We use the data_loader (Google Sheets) as previously configured
 from utils.data_loader import get_dashboard_data
 
 def show_view():
     render_header("📊 บทสรุปผู้บริหาร (Executive Summary)", border_color="#607D8B")
     
-    # Filters
+    # Check if data exists in session to get years
+    available_years = ["2568"]
+    if 'df_eis' in st.session_state and not st.session_state['df_eis'].empty:
+        df = st.session_state['df_eis']
+        df['Year'] = df['Year'].astype(str)
+        available_years = sorted(df['Year'].unique(), reverse=True)
+
     thai_months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", 
                    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
-    years = ["2568", "2567", "2566"]
     
     c1, c2, c3, c4 = st.columns(4)
     with c1: sel_month = st.selectbox("ช่วงเวลา", thai_months, index=10)
-    with c2: sel_year = st.selectbox("ปี", years, index=0)
+    with c2: sel_year = st.selectbox("ปี", available_years, index=0)
     
-    # Get Data
     data = get_dashboard_data(sel_year, sel_month)
     st.write("---")
 
-    # --- ROW 1: KPIS & BAR CHARTS ---
     c1, c2 = st.columns(2)
     
-    # CPK Column
     with c1:
         st.markdown(f"""
             <div class="card-cpk">
@@ -39,11 +40,8 @@ def show_view():
             
         fig = px.bar(x=data['cpk']['apply_vals'], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
         fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), font_family="Kanit")
-        
-        # FIX: Added unique key here
         st.plotly_chart(fig, use_container_width=True, key="chart_cpk_bar")
 
-    # CPS Column
     with c2:
         st.markdown(f"""
             <div class="card-cps">
@@ -58,11 +56,8 @@ def show_view():
             
         fig = px.bar(x=data['cps']['apply_vals'], y=["สมัคร", "ขอกลับ"], orientation='h', color_discrete_sequence=['#4CAF50'])
         fig.update_layout(height=180, margin=dict(l=0,r=0,t=0,b=0), font_family="Kanit")
-        
-        # FIX: Added unique key here
         st.plotly_chart(fig, use_container_width=True, key="chart_cps_bar")
     
-    # --- ROW 2: FINANCE & TRENDS ---
     st.markdown("### 💳 การนำส่งเงิน & งบการเงิน")
     f1, f2 = st.columns(2)
     
@@ -71,8 +66,6 @@ def show_view():
         df_trend = pd.DataFrame({'M': range(12), 'V': data['finance']['cpk_trend']})
         fig = px.line(df_trend, x='M', y='V', markers=True)
         fig.update_layout(height=200, margin=dict(t=10,b=10), font_family="Kanit")
-        
-        # FIX: Added unique key here
         st.plotly_chart(fig, use_container_width=True, key="chart_cpk_trend")
         
     with f2:
@@ -81,6 +74,4 @@ def show_view():
         fig = px.line(df_trend, x='M', y='V', markers=True)
         fig.update_traces(line_color='#8E24AA')
         fig.update_layout(height=200, margin=dict(t=10,b=10), font_family="Kanit")
-        
-        # FIX: Added unique key here
         st.plotly_chart(fig, use_container_width=True, key="chart_cps_trend")
