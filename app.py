@@ -26,13 +26,13 @@ if "logged_in" not in st.session_state:
     
 # MFA States
 if "login_stage" not in st.session_state:
-    st.session_state.login_stage = "credentials" # options: 'credentials', 'otp'
+    st.session_state.login_stage = "credentials" 
 if "temp_user_data" not in st.session_state:
     st.session_state.temp_user_data = {}
 if "otp_secret" not in st.session_state:
     st.session_state.otp_secret = ""
 
-# Auto-login (Cookie bypasses MFA for convenience if cookie exists)
+# Auto-login
 if not st.session_state.logged_in:
     try:
         cookie_user = cookie_manager.get(cookie="user_session")
@@ -76,47 +76,41 @@ def login_page():
             remember = st.checkbox("จำรหัสผ่านไว้ 10 วัน (Remember me)")
             
             if st.button("ถัดไป (Next)", use_container_width=True):
-                # 1. Verify Password
                 user_data = auth.check_credentials(user, pw)
                 
                 if user_data:
-                    # 2. Generate OTP
                     otp = email_service.generate_otp()
                     user_email = user_data.get('email', '')
                     
                     if not user_email or "@" not in user_email:
                         st.error("❌ บัญชีนี้ยังไม่ได้ระบุอีเมล กรุณาติดต่อ Admin")
                     else:
-                        # 3. Send Email
-                        success, msg = email_service.send_otp_email(user_email, otp)
+                        # Try to send email (It will likely fail without real settings)
+                        email_service.send_otp_email(user_email, otp)
                         
-                        if success:
-                            # 4. Save State & Move to Stage 2
-                            st.session_state.temp_user_data = user_data
-                            st.session_state.temp_user_data['remember'] = remember # Store check box
-                            st.session_state.otp_secret = otp
-                            st.session_state.login_stage = "otp"
-                            st.success("✅ OTP ถูกส่งไปยังอีเมลของคุณแล้ว")
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            # If email fails (e.g. testing mode), show OTP in warning for now (REMOVE IN PRODUCTION)
-                            st.warning(f"{msg}")
-                            # For Testing without SMTP, allow moving forward:
-                            st.session_state.temp_user_data = user_data
-                            st.session_state.temp_user_data['remember'] = remember
-                            st.session_state.otp_secret = otp
-                            st.session_state.login_stage = "otp"
-                            time.sleep(2)
-                            st.rerun()
+                        # --- FORCE SHOW OTP FOR TESTING ---
+                        st.info(f"🔑 **TEST MODE OTP:** {otp}") 
+                        # ----------------------------------
+
+                        st.session_state.temp_user_data = user_data
+                        st.session_state.temp_user_data['remember'] = remember
+                        st.session_state.otp_secret = otp
+                        st.session_state.login_stage = "otp"
+                        
+                        # Wait longer so you can read the OTP before reload
+                        time.sleep(5) 
+                        st.rerun()
                 else:
                     st.error("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
 
         # --- STAGE 2: OTP VERIFICATION ---
         elif st.session_state.login_stage == "otp":
+            # Show the OTP here too just in case it refreshed too fast
+            st.warning(f"🔑 **TEST CODE:** {st.session_state.otp_secret}")
+            
             st.info(f"📧 กรุณากรอกรหัส 6 หลักที่ส่งไปยัง {st.session_state.temp_user_data.get('email')}")
             
-            otp_input = st.text_input("รหัส OTP (Check Email or Console)", max_chars=6)
+            otp_input = st.text_input("รหัส OTP", max_chars=6)
             
             c_back, c_conf = st.columns(2)
             with c_back:
@@ -126,7 +120,6 @@ def login_page():
             with c_conf:
                 if st.button("ยืนยัน (Verify)", type="primary", use_container_width=True):
                     if otp_input == st.session_state.otp_secret:
-                        # LOGIN SUCCESSFUL
                         user_data = st.session_state.temp_user_data
                         st.session_state.logged_in = True
                         st.session_state.role = user_data["role"]
@@ -137,7 +130,6 @@ def login_page():
                             expires = datetime.datetime.now() + datetime.timedelta(days=10)
                             cookie_manager.set("user_session", user_data['username'], expires_at=expires)
                         
-                        # Cleanup
                         st.session_state.login_stage = "credentials"
                         st.session_state.otp_secret = ""
                         st.rerun()
@@ -181,7 +173,7 @@ else:
         st.session_state.logged_in = False
         st.session_state.role = None
         st.session_state.allowed_views = []
-        st.session_state.login_stage = "credentials" # Reset login stage
+        st.session_state.login_stage = "credentials" 
         try: cookie_manager.delete("user_session")
         except: pass
         time.sleep(0.1) 
@@ -215,13 +207,3 @@ else:
     else:
         st.sidebar.warning("🚫 No dashboards assigned.")
         st.info("คุณไม่ได้รับสิทธิ์ในการเข้าถึงแดชบอร์ดใดๆ กรุณาติดต่อผู้ดูแลระบบ")
-# --- TEMPORARY RESET BUTTON (Delete after use) ---
-if st.sidebar.button("⚠️ RESET ALL USERS (Fix Login)"):
-    import os
-    if os.path.exists("users.json"):
-        os.remove("users.json")
-        st.sidebar.success("✅ Users reset! Please reload the page.")
-        time.sleep(1)
-        st.rerun()
-    else:
-        st.sidebar.warning("File already deleted.")
