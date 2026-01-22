@@ -13,11 +13,18 @@ def show_view():
 
     df = st.session_state['df_strategy'].copy()
     
+    # --- DATA CLEANING (Fixes "No Data" issues) ---
+    # 1. Strip whitespace from Category names (e.g., "Unit_Perf " -> "Unit_Perf")
+    df['Category'] = df['Category'].astype(str).str.strip()
+    
+    # 2. Ensure Unit_Score is numeric for sorting
+    if 'Unit_Score' in df.columns:
+        df['Unit_Score'] = pd.to_numeric(df['Unit_Score'], errors='coerce').fillna(0)
+    
     # --- COMPARISON FILTER ---
     available_years = sorted(df['Year'].unique(), reverse=True)
     if not available_years: available_years = ["2568"]
     
-    # Default to first year vs second year (if exists), else same year
     idx_main = 0
     idx_comp = 1 if len(available_years) > 1 else 0
 
@@ -27,15 +34,14 @@ def show_view():
     with c2: 
         year_comp = st.selectbox("เปรียบเทียบกับ (Previous)", available_years, index=idx_comp)
     
-    # Filter Data for both years
+    # Filter Data
     df_curr = df[df['Year'] == str(year_main)]
     df_prev = df[df['Year'] == str(year_comp)]
     
     st.write("---")
     st.markdown(f"##### 💰 รายรับ - รายจ่าย สกสค. ปีงบประมาณ {year_main}")
 
-    # --- 1. TOP CARDS (Financials) ---
-    # Extract Totals
+    # --- 1. TOP CARDS ---
     def get_fin_data(dframe):
         rev = dframe[dframe['Category'] == 'Revenue_Total']['Actual_Amount'].sum()
         rev_plan = dframe[dframe['Category'] == 'Revenue_Total']['Plan_Amount'].sum()
@@ -49,14 +55,13 @@ def show_view():
     cur_net = cur_rev - cur_exp
     prev_net = prev_rev - (df_prev[df_prev['Category'] == 'Expense_Total']['Actual_Amount'].sum())
 
-    # Calculate Percentages
     rev_pct = (cur_rev / cur_rev_plan * 100) if cur_rev_plan > 0 else 0
     exp_pct = (cur_exp / cur_exp_plan * 100) if cur_exp_plan > 0 else 0
     net_growth = ((cur_net - prev_net) / prev_net * 100) if prev_net > 0 else 0
 
     c1, c2, c3 = st.columns(3)
 
-    # Card 1: Revenue (Green Theme)
+    # Card 1
     with c1:
         st.markdown(f"""
         <div style="background:white; padding:15px; border-radius:10px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
@@ -72,7 +77,7 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # Card 2: Expense (Red Theme)
+    # Card 2
     with c2:
         st.markdown(f"""
         <div style="background:white; padding:15px; border-radius:10px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
@@ -88,7 +93,7 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # Card 3: Net (Blue Theme)
+    # Card 3
     with c3:
         color = "#008CBA" if net_growth >= 0 else "#F44336"
         arrow = "▲" if net_growth >= 0 else "▼"
@@ -108,38 +113,28 @@ def show_view():
 
     st.write("---")
 
-    # --- 2. MIDDLE CHARTS (Plan vs Actual) ---
+    # --- 2. MIDDLE CHARTS ---
     c1, c2 = st.columns(2)
-
-    # Chart 1: Expense by Strategy
     with c1:
         st.markdown("##### 📊 รายจ่ายตามยุทธศาสตร์ (ล้านบาท)")
         df_strat = df_curr[df_curr['Category'] == 'Strategy'].copy()
-        
-        # Prepare data for Plotly (Long format)
         if not df_strat.empty:
             fig = go.Figure()
-            fig.add_trace(go.Bar(name='งบประมาณ', x=df_strat['Item'], y=df_strat['Plan_Amount'], marker_color='#B2EBF2')) # Light Blue
-            fig.add_trace(go.Bar(name='เบิกจ่ายจริง', x=df_strat['Item'], y=df_strat['Actual_Amount'], marker_color='#4CAF50')) # Green
-            
-            fig.update_layout(barmode='group', height=350, margin=dict(l=0,r=0,t=20,b=0), font_family="Kanit", 
-                              legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+            fig.add_trace(go.Bar(name='งบประมาณ', x=df_strat['Item'], y=df_strat['Plan_Amount'], marker_color='#B2EBF2'))
+            fig.add_trace(go.Bar(name='เบิกจ่ายจริง', x=df_strat['Item'], y=df_strat['Actual_Amount'], marker_color='#4CAF50'))
+            fig.update_layout(barmode='group', height=350, margin=dict(l=0,r=0,t=20,b=0), font_family="Kanit", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
             st.plotly_chart(fig, use_container_width=True, key="strat_exp_chart")
         else:
             st.info("ไม่มีข้อมูลยุทธศาสตร์")
 
-    # Chart 2: Revenue by Source
     with c2:
         st.markdown("##### 📊 รายรับตามประเภท (ล้านบาท)")
         df_src = df_curr[df_curr['Category'] == 'Rev_Source'].copy()
-        
         if not df_src.empty:
             fig = go.Figure()
             fig.add_trace(go.Bar(name='แผน', x=df_src['Item'], y=df_src['Plan_Amount'], marker_color='#B2EBF2'))
             fig.add_trace(go.Bar(name='ผล', x=df_src['Item'], y=df_src['Actual_Amount'], marker_color='#4CAF50'))
-            
-            fig.update_layout(barmode='group', height=350, margin=dict(l=0,r=0,t=20,b=0), font_family="Kanit",
-                              legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+            fig.update_layout(barmode='group', height=350, margin=dict(l=0,r=0,t=20,b=0), font_family="Kanit", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
             st.plotly_chart(fig, use_container_width=True, key="strat_rev_chart")
         else:
             st.info("ไม่มีข้อมูลประเภทรายรับ")
@@ -148,46 +143,22 @@ def show_view():
 
     # --- 3. KPI CARDS ---
     k1, k2, k3, k4 = st.columns(4)
-    
-    # Static logic for simulation based on image
-    with k1:
-        st.metric("อัตราความสำเร็จเฉลี่ย", "91.3%", "23 ตัวชี้วัด")
-    with k2:
-        st.markdown(f"""
-        <div style="text-align:center; padding:10px; border:1px solid #eee; border-radius:10px;">
-            <div style="font-size:12px; color:#555;">บรรลุเป้าหมาย</div>
-            <div style="font-size:32px; font-weight:bold; color:#FF9800;">17</div>
-            <div style="font-size:10px; color:#aaa;">≥ 70%</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with k3:
-        st.markdown(f"""
-        <div style="text-align:center; padding:10px; border:1px solid #eee; border-radius:10px;">
-            <div style="font-size:12px; color:#555;">ใกล้บรรลุ</div>
-            <div style="font-size:32px; font-weight:bold; color:#FFC107;">4</div>
-            <div style="font-size:10px; color:#aaa;">80-99%</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with k4:
-        st.markdown(f"""
-        <div style="text-align:center; padding:10px; border:1px solid #eee; border-radius:10px;">
-            <div style="font-size:12px; color:#555;">ต้องปรับปรุง</div>
-            <div style="font-size:32px; font-weight:bold; color:#F44336;">2</div>
-            <div style="font-size:10px; color:#aaa;"> < 80%</div>
-        </div>
-        """, unsafe_allow_html=True)
+    with k1: st.metric("อัตราความสำเร็จเฉลี่ย", "91.3%", "23 ตัวชี้วัด")
+    with k2: st.markdown(f"""<div style="text-align:center; padding:10px; border:1px solid #eee; border-radius:10px;"><div style="font-size:12px; color:#555;">บรรลุเป้าหมาย</div><div style="font-size:32px; font-weight:bold; color:#FF9800;">17</div><div style="font-size:10px; color:#aaa;">≥ 70%</div></div>""", unsafe_allow_html=True)
+    with k3: st.markdown(f"""<div style="text-align:center; padding:10px; border:1px solid #eee; border-radius:10px;"><div style="font-size:12px; color:#555;">ใกล้บรรลุ</div><div style="font-size:32px; font-weight:bold; color:#FFC107;">4</div><div style="font-size:10px; color:#aaa;">80-99%</div></div>""", unsafe_allow_html=True)
+    with k4: st.markdown(f"""<div style="text-align:center; padding:10px; border:1px solid #eee; border-radius:10px;"><div style="font-size:12px; color:#555;">ต้องปรับปรุง</div><div style="font-size:32px; font-weight:bold; color:#F44336;">2</div><div style="font-size:10px; color:#aaa;"> < 80%</div></div>""", unsafe_allow_html=True)
 
     st.write("---")
 
-    # --- 4. BOTTOM RANKINGS (Top/Bottom 5) ---
+    # --- 4. RANKING CHARTS (FIXED) ---
     c1, c2 = st.columns(2)
     
+    # Filter for Unit Performance (and strip spaces again just in case)
     df_perf = df_curr[df_curr['Category'] == 'Unit_Perf'].copy()
     
     if not df_perf.empty:
-        # Top 5
+        # Sort by numeric score
         top_5 = df_perf.sort_values('Unit_Score', ascending=False).head(5)
-        # Bottom 5
         bot_5 = df_perf.sort_values('Unit_Score', ascending=True).head(5)
 
         with c1:
@@ -206,4 +177,4 @@ def show_view():
                               yaxis={'categoryorder':'total descending'}, xaxis_title=None, yaxis_title=None, xaxis_range=[0,105])
             st.plotly_chart(fig, use_container_width=True, key="bot5_chart")
     else:
-        st.info("ไม่มีข้อมูลผลการปฏิบัติงานหน่วยงาน")
+        st.info(f"ไม่มีข้อมูลผลการปฏิบัติงานหน่วยงาน ของปี {year_main} (กรุณาตรวจสอบข้อมูลใน Excel tab: Strategy_Data)")
