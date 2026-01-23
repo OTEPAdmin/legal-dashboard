@@ -28,7 +28,7 @@ if "login_stage" not in st.session_state: st.session_state.login_stage = "creden
 if "temp_user_data" not in st.session_state: st.session_state.temp_user_data = {}
 if "otp_secret" not in st.session_state: st.session_state.otp_secret = ""
 
-# Set Default View (Updated Name)
+# Set Default View
 if "current_view" not in st.session_state:
     st.session_state.current_view = "สำนัก ช.พ.ค. - ช.พ.ส"
 
@@ -49,13 +49,16 @@ if not st.session_state.logged_in:
     except Exception as e:
         print(f"Cookie read error: {e}")
 
-# 3. UPLOAD DATA VIEW
+# 3. UPLOAD DATA VIEW (UPDATED WITH REFRESH BUTTON)
 def show_upload_view():
     st.markdown("## 📂 อัปโหลดข้อมูล (Upload Data)")
     st.info("กรุณาอัปโหลดไฟล์ Excel (.xlsx) เพื่ออัปเดตข้อมูลในระบบ")
+
+    # Load data if not present
     if 'df_eis' not in st.session_state:
         if load_from_disk(): st.session_state['data_loaded'] = True
 
+    # File Uploader
     uploaded_file = st.file_uploader("ลากและวางไฟล์ที่นี่ (Drag and drop file here)", type=["xlsx"])
     
     if uploaded_file:
@@ -68,10 +71,41 @@ def show_upload_view():
                     time.sleep(1.5)
                     st.rerun()
     
+    # Status Display
     if st.session_state.get('data_loaded', False):
         st.success(f"สถานะข้อมูล: ✅ พร้อมใช้งาน (Source: {st.session_state.get('last_loaded_file', 'Saved File')})")
     else:
         st.warning("สถานะข้อมูล: ⚠️ ยังไม่มีข้อมูลในระบบ")
+
+    st.write("---")
+    
+    # --- MANUAL REFRESH BUTTON (NEW) ---
+    st.markdown("### 🔄 แก้ไขปัญหา (Troubleshooting)")
+    st.caption("หากข้อมูลกราฟไม่ขึ้น หรือแสดง Error ว่า Missing Column ให้กดปุ่มนี้เพื่อบังคับโหลดข้อมูลใหม่")
+    
+    if st.button("🔄 บังคับโหลดข้อมูลใหม่ (Force Refresh)", type="primary"):
+        with st.spinner("กำลังล้างค่าและโหลดข้อมูลใหม่..."):
+            # 1. Clear Cache
+            st.cache_data.clear()
+            
+            # 2. Clear Session State Data
+            keys_to_clear = [
+                'df_eis', 'df_eis_extra', 'df_procure', 'df_strategy', 
+                'df_finance', 'df_treasury', 'df_welfare', 'df_dorm',
+                'df_hospital', 'df_legal', 'df_audit', 'df_admin', 'data_loaded'
+            ]
+            for k in keys_to_clear:
+                if k in st.session_state:
+                    del st.session_state[k]
+
+            # 3. Reload
+            if load_from_disk():
+                st.session_state['data_loaded'] = True
+                st.success("✅ โหลดข้อมูลใหม่สำเร็จ! (Refreshed Successfully)")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("❌ ไม่พบไฟล์ข้อมูลในระบบ (File not found)")
 
 # 4. LOGIN PAGE
 def login_page():
@@ -149,18 +183,18 @@ else:
     st.sidebar.caption(f"Role: {st.session_state.role}")
     st.sidebar.divider()
 
-    # --- DEFINE MENUS (ALL RENAMED HERE) ---
+    # --- DEFINE MENUS ---
     dashboard_map = {
         "สำนัก ช.พ.ค. - ช.พ.ส": eis.show_view,
-        "สำนักการคลัง - กลุ่มการเงิน": treasury.show_view,          # Renamed
-        "สำนักการคลัง - กลุ่มการพัสดุและอาคารสถานที่": procurement.show_view, # Renamed
-        "สำนักการคลัง - กลุ่มบัญชี": finance.show_view,             # Renamed
-        "สำนักนโยบาย และยุทธศาสตร์": strategy.show_view,          # Renamed
-        "โรงพยาบาลครู": hospital.show_view,                        # Renamed
-        "สำนักสวัสดิการ": welfare.show_view,                       # Renamed
+        "สำนักการคลัง - กลุ่มการเงิน": treasury.show_view,
+        "สำนักการคลัง - กลุ่มการพัสดุและอาคารสถานที่": procurement.show_view,
+        "สำนักการคลัง - กลุ่มบัญชี": finance.show_view,
+        "สำนักนโยบาย และยุทธศาสตร์": strategy.show_view,
+        "โรงพยาบาลครู": hospital.show_view,
+        "สำนักสวัสดิการ": welfare.show_view,
         "หอพัก สกสค.": dorm.show_view,
         "สำนักอำนวยการ": admin.show_view,
-        "หน่วยตรวจสอบภายใน": audit.show_view,                      # Renamed
+        "หน่วยตรวจสอบภายใน": audit.show_view,
         "สำนักนิติการ": legal.show_view,
     }
 
@@ -193,6 +227,8 @@ else:
                 st.session_state.current_view = name
                 st.rerun()
 
+        # REMOVED OLD TEMPORARY BUTTONS TO CLEAN UP INTERFACE
+        
         st.sidebar.markdown("---")
         if st.sidebar.button("🚪 ออกจากระบบ (Log off)", use_container_width=True, type="secondary"):
             st.session_state.logged_in = False
@@ -222,7 +258,6 @@ else:
     elif st.session_state.current_view in admin_map and st.session_state.role == "Admin":
         admin_map[st.session_state.current_view]()
     else:
-        # Auto-fix if current_view is invalid (e.g., old name stored in session)
         if available_dashboards:
             st.session_state.current_view = list(available_dashboards.keys())[0]
             st.rerun()
