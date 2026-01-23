@@ -4,9 +4,15 @@ import os
 
 LOG_FILE = "data/system_logs.csv"
 
+# Define Bangkok Timezone (GMT+7)
+BANGKOK_TZ = datetime.timezone(datetime.timedelta(hours=7))
+
 def log_action(user, action, details):
-    """Records an action to the CSV log file."""
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    """Records an action to the CSV log file with Bangkok Time (GMT+7)."""
+    # Get current time in Bangkok timezone
+    now_bangkok = datetime.datetime.now(BANGKOK_TZ)
+    timestamp = now_bangkok.strftime("%Y-%m-%d %H:%M:%S")
+    
     new_entry = {"Timestamp": timestamp, "User": user, "Action": action, "Details": details}
     
     # Ensure directory exists
