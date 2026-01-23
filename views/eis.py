@@ -1,41 +1,4 @@
-# At the top
-from utils.config_manager import is_feature_visible
-
-# ... (Inside show_view) ...
-
-    # =================================================================================================
-    # SECTION 1: EXECUTIVE SUMMARY
-    # =================================================================================================
-    if is_feature_visible("EIS_Executive_Summary"):
-        st.markdown("#### 📊 บทสรุปผู้บริหาร")
-        # ... (Rest of Section 1 code) ...
-        # ...
-        st.write("---")
-
-    # =================================================================================================
-    # SECTION 2: DEMOGRAPHICS
-    # =================================================================================================
-    if is_feature_visible("EIS_Demographics"):
-        st.markdown("#### 👥 ข้อมูลสมาชิก | DEMOGRAPHIC")
-        # ... (Rest of Section 2 code) ...
-        # ...
-        st.write("---")
-        
-    # =================================================================================================
-    # SECTION 3: DEATH STATS
-    # =================================================================================================
-    if is_feature_visible("EIS_Death_Stats"):
-        st.markdown("#### ☠️ สาเหตุการเสียชีวิต | CAUSES OF DEATH")
-        # ... (Rest of Section 3 code) ...
-        # ...
-        st.write("---")
-
-    # =================================================================================================
-    # SECTION 4: FINANCIALS
-    # =================================================================================================
-    if is_feature_visible("EIS_Financials"):
-        st.markdown("#### 💸 การนำส่งเงิน & งบการเงิน")
-        # ... (Rest of Section 4 code) ...import streamlit as st
+import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
