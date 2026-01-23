@@ -3,6 +3,8 @@ import os
 import base64
 import datetime
 import time
+import pandas as pd
+import io
 from utils.styles import load_css
 from utils.data_loader import save_and_load_excel, load_from_disk
 from utils import auth
@@ -49,16 +51,16 @@ if not st.session_state.logged_in:
     except Exception as e:
         print(f"Cookie read error: {e}")
 
-# 3. UPLOAD DATA VIEW (UPDATED WITH REFRESH BUTTON)
+# 3. ADMIN VIEWS
+# ---------------------------------------------------------
+# 3.1 UPLOAD VIEW
 def show_upload_view():
     st.markdown("## 📂 อัปโหลดข้อมูล (Upload Data)")
     st.info("กรุณาอัปโหลดไฟล์ Excel (.xlsx) เพื่ออัปเดตข้อมูลในระบบ")
 
-    # Load data if not present
     if 'df_eis' not in st.session_state:
         if load_from_disk(): st.session_state['data_loaded'] = True
 
-    # File Uploader
     uploaded_file = st.file_uploader("ลากและวางไฟล์ที่นี่ (Drag and drop file here)", type=["xlsx"])
     
     if uploaded_file:
@@ -71,7 +73,6 @@ def show_upload_view():
                     time.sleep(1.5)
                     st.rerun()
     
-    # Status Display
     if st.session_state.get('data_loaded', False):
         st.success(f"สถานะข้อมูล: ✅ พร้อมใช้งาน (Source: {st.session_state.get('last_loaded_file', 'Saved File')})")
     else:
@@ -79,16 +80,12 @@ def show_upload_view():
 
     st.write("---")
     
-    # --- MANUAL REFRESH BUTTON (NEW) ---
     st.markdown("### 🔄 แก้ไขปัญหา (Troubleshooting)")
     st.caption("หากข้อมูลกราฟไม่ขึ้น หรือแสดง Error ว่า Missing Column ให้กดปุ่มนี้เพื่อบังคับโหลดข้อมูลใหม่")
     
     if st.button("🔄 บังคับโหลดข้อมูลใหม่ (Force Refresh)", type="primary"):
         with st.spinner("กำลังล้างค่าและโหลดข้อมูลใหม่..."):
-            # 1. Clear Cache
             st.cache_data.clear()
-            
-            # 2. Clear Session State Data
             keys_to_clear = [
                 'df_eis', 'df_eis_extra', 'df_procure', 'df_strategy', 
                 'df_finance', 'df_treasury', 'df_welfare', 'df_dorm',
@@ -98,7 +95,6 @@ def show_upload_view():
                 if k in st.session_state:
                     del st.session_state[k]
 
-            # 3. Reload
             if load_from_disk():
                 st.session_state['data_loaded'] = True
                 st.success("✅ โหลดข้อมูลใหม่สำเร็จ! (Refreshed Successfully)")
@@ -106,6 +102,67 @@ def show_upload_view():
                 st.rerun()
             else:
                 st.error("❌ ไม่พบไฟล์ข้อมูลในระบบ (File not found)")
+
+# 3.2 DOWNLOAD VIEW (NEW)
+def show_download_view():
+    st.markdown("## 📥 ดาวน์โหลดข้อมูล (Download Data)")
+    st.info("เลือกชุดข้อมูลที่ต้องการดาวน์โหลดเป็นไฟล์ CSV หรือ Excel")
+
+    # Map Readable Name -> Session Key
+    dataset_map = {
+        "EIS Data (Member Stats)": "df_eis",
+        "EIS Extra (Death/Finance)": "df_eis_extra",
+        "Strategy Data (นโยบาย/แผน)": "df_strategy",
+        "Procurement Data (พัสดุ)": "df_procure",
+        "Finance Data (บัญชี)": "df_finance",
+        "Treasury Data (การเงิน)": "df_treasury",
+        "Welfare Data (สวัสดิการ)": "df_welfare",
+        "Dorm Data (หอพัก)": "df_dorm",
+        "Hospital Data (รพ.ครู)": "df_hospital",
+        "Legal Data (นิติการ)": "df_legal",
+        "Audit Data (ตรวจสอบภายใน)": "df_audit",
+        "Admin Data (อำนวยการ)": "df_admin"
+    }
+
+    # Dropdown to select dataset
+    selected_dataset_name = st.selectbox("เลือกชุดข้อมูล (Select Dataset)", list(dataset_map.keys()))
+    session_key = dataset_map[selected_dataset_name]
+
+    # Check if data exists
+    if session_key in st.session_state and isinstance(st.session_state[session_key], pd.DataFrame) and not st.session_state[session_key].empty:
+        df = st.session_state[session_key]
+        
+        st.write(f"**ตัวอย่างข้อมูล ({len(df)} แถว):**")
+        st.dataframe(df.head(5), use_container_width=True)
+        
+        col1, col2 = st.columns(2)
+        
+        # CSV Download
+        with col1:
+            csv = df.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📄 ดาวน์โหลดเป็น CSV",
+                data=csv,
+                file_name=f"{session_key}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        
+        # Excel Download
+        with col2:
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False, sheet_name='Sheet1')
+            
+            st.download_button(
+                label="📊 ดาวน์โหลดเป็น Excel",
+                data=buffer,
+                file_name=f"{session_key}.xlsx",
+                mime="application/vnd.ms-excel",
+                use_container_width=True
+            )
+    else:
+        st.warning(f"⚠️ ไม่พบข้อมูลสำหรับชุดข้อมูลนี้ ({session_key}) กรุณาอัปโหลดไฟล์ก่อน")
 
 # 4. LOGIN PAGE
 def login_page():
@@ -209,7 +266,8 @@ else:
     admin_map = {
         "⚙️ จัดการผู้ใช้งาน (Users)": user_management.show_view,
         "🔌 จัดการ API (API Keys)": api_management.show_view,
-        "📂 อัปโหลดข้อมูล (Upload)": show_upload_view
+        "📂 อัปโหลดข้อมูล (Upload)": show_upload_view,
+        "📥 ดาวน์โหลดข้อมูล (Download)": show_download_view # <--- NEW MENU
     }
 
     # --- RENDER SIDEBAR ---
@@ -226,8 +284,6 @@ else:
             if st.sidebar.button(name, use_container_width=True, type="primary" if st.session_state.current_view == name else "secondary"):
                 st.session_state.current_view = name
                 st.rerun()
-
-        # REMOVED OLD TEMPORARY BUTTONS TO CLEAN UP INTERFACE
         
         st.sidebar.markdown("---")
         if st.sidebar.button("🚪 ออกจากระบบ (Log off)", use_container_width=True, type="secondary"):
