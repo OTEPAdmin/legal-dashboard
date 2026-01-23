@@ -5,7 +5,7 @@ import plotly.express as px
 from utils.styles import render_header
 
 def show_view():
-    render_header("📈 กลุ่มนโยบายและยุทธศาสตร์ (Policy & Strategy)", border_color="#4CAF50")
+    render_header("สำนักนโยบายและยุทธศาสตร์", border_color="#4CAF50")
     
     if 'df_strategy' not in st.session_state or st.session_state['df_strategy'].empty:
         st.error("⚠️ ไม่พบข้อมูล Strategy_Data ใน Excel")
