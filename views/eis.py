@@ -84,7 +84,6 @@ def show_view():
     # =================================================================================================
     st.markdown("#### 📊 บทสรุปผู้บริหาร")
 
-    # ROW 1: OVERVIEW CARDS
     col_cpk, col_cps = st.columns(2)
 
     # 1.1 CPK CARD
@@ -180,13 +179,7 @@ def show_view():
         val_withdraw = int(cpk_resign_val * 0.5)
         val_resign = int(cpk_resign_val * 0.3)
         val_other = cpk_resign_val - val_withdraw - val_resign
-        
-        fig = create_horiz_bar(
-            [val_other, val_dead, val_resign, val_withdraw], 
-            ['อื่นๆ', 'ตาย', 'ลาออก', 'ถอนชื่อ'], 
-            ['#9E9E9E', '#E53935', '#8E24AA', '#FFB300'], 
-            "📉 จำหน่าย ช.พ.ค."
-        )
+        fig = create_horiz_bar([val_other, val_dead, val_resign, val_withdraw], ['อื่นๆ', 'ตาย', 'ลาออก', 'ถอนชื่อ'], ['#9E9E9E', '#E53935', '#8E24AA', '#FFB300'], "📉 จำหน่าย ช.พ.ค.")
         st.plotly_chart(fig, use_container_width=True)
 
     with c3:
@@ -200,13 +193,7 @@ def show_view():
         val_withdraw = int(cps_resign_val * 0.5)
         val_resign = int(cps_resign_val * 0.3)
         val_other = cps_resign_val - val_withdraw - val_resign
-        
-        fig = create_horiz_bar(
-            [val_other, val_dead, val_resign, val_withdraw], 
-            ['อื่นๆ', 'ตาย', 'ลาออก', 'ถอนชื่อ'], 
-            ['#9E9E9E', '#E53935', '#00ACC1', '#FFB300'], 
-            "📉 จำหน่าย ช.พ.ส."
-        )
+        fig = create_horiz_bar([val_other, val_dead, val_resign, val_withdraw], ['อื่นๆ', 'ตาย', 'ลาออก', 'ถอนชื่อ'], ['#9E9E9E', '#E53935', '#00ACC1', '#FFB300'], "📉 จำหน่าย ช.พ.ส.")
         st.plotly_chart(fig, use_container_width=True)
 
     st.write("---")
@@ -216,83 +203,49 @@ def show_view():
     # =================================================================================================
     st.markdown("#### 👥 ข้อมูลสมาชิก | DEMOGRAPHIC")
 
-    # --- Simulation Logic for Demographics (Proportional to Total) ---
-    # We use fixed ratios for demo visualization since raw data doesn't have this granularity
-    
-    # 1. Gender Ratio
+    # Simulation Logic
     cpk_male = int(cpk_total * 0.38)
     cpk_female = cpk_total - cpk_male
-    
     cps_male = int(cps_total * 0.42)
     cps_female = cps_total - cps_male
-
-    # 2. Age Groups (<40, 40-49, 50-59, 60-69, >=70)
-    # Weights: [0.08, 0.18, 0.32, 0.28, 0.14] for CPK
-    # Weights: [0.05, 0.12, 0.25, 0.35, 0.23] for CPS
     cpk_age_vals = [int(cpk_total*x) for x in [0.08, 0.18, 0.32, 0.28, 0.14]]
     cps_age_vals = [int(cps_total*x) for x in [0.05, 0.12, 0.25, 0.35, 0.23]]
     age_labels = ['<40', '40-49', '50-59', '60-69', '≥70']
     age_colors = ['#29B6F6', '#66BB6A', '#FBC02D', '#AB47BC', '#FF7043']
 
-    # --- Layout ---
     col_d1, col_d2, col_d3, col_d4 = st.columns(4)
 
-    # Function for Donut Chart (Gender)
     def create_donut(male_val, female_val, title):
         labels = ['ชาย', 'หญิง']
         values = [male_val, female_val]
-        colors = ['#29B6F6', '#EC407A'] # Blue, Pink
-        
+        colors = ['#29B6F6', '#EC407A'] 
         fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.5, marker_colors=colors, sort=False)])
-        fig.update_layout(
-            title=dict(text=title, font=dict(size=14, family="Kanit"), x=0),
-            height=200,
-            margin=dict(l=10, r=10, t=40, b=10),
-            showlegend=True,
-            legend=dict(orientation="h", y=-0.1, font=dict(family="Kanit"))
-        )
+        fig.update_layout(title=dict(text=title, font=dict(size=14, family="Kanit"), x=0), height=200, margin=dict(l=10, r=10, t=40, b=10), showlegend=True, legend=dict(orientation="h", y=-0.1, font=dict(family="Kanit")))
         return fig
 
-    # Function for Bar Chart (Age)
     def create_age_bar(values, title):
-        fig = go.Figure(go.Bar(
-            x=age_labels,
-            y=values,
-            marker_color=age_colors,
-            text=[f"{v:,}" for v in values],
-            textposition='auto'
-        ))
-        fig.update_layout(
-            title=dict(text=title, font=dict(size=14, family="Kanit"), x=0),
-            height=200,
-            margin=dict(l=10, r=10, t=40, b=10),
-            xaxis=dict(tickfont=dict(family="Kanit")),
-            yaxis=dict(showgrid=True, gridcolor='#eee'),
-            plot_bgcolor='white',
-            font=dict(family="Kanit")
-        )
+        fig = go.Figure(go.Bar(x=age_labels, y=values, marker_color=age_colors, text=[f"{v:,}" for v in values], textposition='auto'))
+        fig.update_layout(title=dict(text=title, font=dict(size=14, family="Kanit"), x=0), height=200, margin=dict(l=10, r=10, t=40, b=10), xaxis=dict(tickfont=dict(family="Kanit")), yaxis=dict(showgrid=True, gridcolor='#eee'), plot_bgcolor='white', font=dict(family="Kanit"))
         return fig
 
-    # Render Cards
-    with col_d1:
-        st.plotly_chart(create_donut(cpk_male, cpk_female, "👫 สัดส่วนเพศ ช.พ.ค."), use_container_width=True)
-
-    with col_d2:
-        st.plotly_chart(create_age_bar(cpk_age_vals, "📊 กลุ่มอายุ ช.พ.ค."), use_container_width=True)
-
-    with col_d3:
-        st.plotly_chart(create_donut(cps_male, cps_female, "👫 สัดส่วนเพศ ช.พ.ส."), use_container_width=True)
-
-    with col_d4:
-        st.plotly_chart(create_age_bar(cps_age_vals, "📊 กลุ่มอายุ ช.พ.ส."), use_container_width=True)
+    with col_d1: st.plotly_chart(create_donut(cpk_male, cpk_female, "👫 สัดส่วนเพศ ช.พ.ค."), use_container_width=True)
+    with col_d2: st.plotly_chart(create_age_bar(cpk_age_vals, "📊 กลุ่มอายุ ช.พ.ค."), use_container_width=True)
+    with col_d3: st.plotly_chart(create_donut(cps_male, cps_female, "👫 สัดส่วนเพศ ช.พ.ส."), use_container_width=True)
+    with col_d4: st.plotly_chart(create_age_bar(cps_age_vals, "📊 กลุ่มอายุ ช.พ.ส."), use_container_width=True)
 
     st.write("---")
 
-    # --- 3. PREPARE EXTRA DATA (DEATH/FINANCE) FOR NEXT SECTIONS ---
-    # (Keeping this logic ready for future sections)
-    cpk_ex = {}
-    cps_ex = {}
+    # =================================================================================================
+    # SECTION 3: CAUSES OF DEATH (สาเหตุการเสียชีวิต)
+    # =================================================================================================
+    #
+    st.markdown("#### ☠️ สาเหตุการเสียชีวิต | CAUSES OF DEATH")
+
+    # Prepare Data from EIS_Extra
+    cpk_death_data = {}
+    cps_death_data = {}
     
+    # Check if Extra Data exists and filter it
     if 'df_eis_extra' in st.session_state and not st.session_state['df_eis_extra'].empty:
         df_ex = st.session_state['df_eis_extra'].copy()
         df_ex['YearNum'] = pd.to_numeric(df_ex['Year'], errors='coerce').fillna(0).astype(int)
@@ -301,13 +254,62 @@ def show_view():
         mask_ex = (df_ex['SortKey'] >= start_key) & (df_ex['SortKey'] <= end_key)
         df_ex_filtered = df_ex[mask_ex]
 
-        # Map Death Causes
-        death_map = {
-            'โรคมะเร็ง': 'Cause_Cancer', 'โรคปอด': 'Cause_Lung',
-            'โรคหัวใจ/หลอดเลือด': 'Cause_Heart', 'ชราภาพ': 'Cause_Old',
-            'ติดเชื้อในกระแสเลือด': 'Cause_Brain'
-        }
-        for item_name, key in death_map.items():
-            val = df_ex_filtered[(df_ex_filtered['Category'] == 'Death_Cause') & (df_ex_filtered['Item'] == item_name)]['Value'].sum()
-            cpk_ex[key] = int(val * 0.55) 
-            cps_ex[key] = int(val * 0.45)
+        # Extract Death Causes
+        # Mapped from original Thai mock data keys to Chart Labels
+        death_mapping = [
+            ('โรคมะเร็ง', 'โรคมะเร็ง'), 
+            ('โรคปอด', 'โรคปอด'), 
+            ('โรคหัวใจ/หลอดเลือด', 'โรคหัวใจ'), 
+            ('ชราภาพ', 'โรคชรา'), 
+            ('ติดเชื้อในกระแสเลือด', 'โรคสมอง') # Mapping infection to Brain/Other category for visual matching
+        ]
+        
+        for db_key, label in death_mapping:
+            val = df_ex_filtered[(df_ex_filtered['Category'] == 'Death_Cause') & (df_ex_filtered['Item'] == db_key)]['Value'].sum()
+            # Split proportionally for CPK/CPS as per established logic
+            cpk_death_data[label] = int(val * 0.55)
+            cps_death_data[label] = int(val * 0.45)
+
+    # Visualization Logic
+    col_death1, col_death2 = st.columns(2)
+    
+    # Colors matching the design
+    # Cancer(Orange), Lung(Blue), Heart(Purple), Old(Yellow), Brain(Green)
+    death_colors = ['#FF7043', '#29B6F6', '#AB47BC', '#FFCA28', '#66BB6A'] 
+    death_labels = ['โรคมะเร็ง', 'โรคปอด', 'โรคหัวใจ', 'โรคชรา', 'โรคสมอง']
+
+    def create_death_bar(data_dict, title, bar_colors):
+        # Create list of values based on fixed order of labels
+        values = [data_dict.get(label, 0) for label in death_labels]
+        
+        fig = go.Figure(go.Bar(
+            x=values,
+            y=death_labels,
+            orientation='h',
+            marker_color=bar_colors,
+            text=[f"{v:,} ราย" for v in values], # Text format: "XXX ราย"
+            textposition='outside', # Text outside bar
+            textfont=dict(family="Kanit", size=12)
+        ))
+        
+        fig.update_layout(
+            title=dict(text=title, font=dict(size=14, family="Kanit"), x=0),
+            height=300,
+            margin=dict(l=0, r=50, t=40, b=0), # Right margin for text
+            xaxis=dict(showgrid=True, gridcolor='#f0f0f0', zeroline=False),
+            yaxis=dict(autorange="reversed", tickfont=dict(family="Kanit")), # Reverse order to match top-down
+            plot_bgcolor='white',
+            font=dict(family="Kanit")
+        )
+        return fig
+
+    # Render Charts
+    with col_death1:
+        # CPK Chart
+        if not cpk_death_data: st.info("ไม่มีข้อมูล")
+        else: st.plotly_chart(create_death_bar(cpk_death_data, "📊 5 อันดับสาเหตุการเสียชีวิต ช.พ.ค.", death_colors), use_container_width=True)
+
+    with col_death2:
+        # CPS Chart
+        if not cps_death_data: st.info("ไม่มีข้อมูล")
+        else: st.plotly_chart(create_death_bar(cps_death_data, "📊 5 อันดับสาเหตุการเสียชีวิต ช.พ.ส.", death_colors), use_container_width=True)
