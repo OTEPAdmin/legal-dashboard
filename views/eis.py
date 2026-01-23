@@ -5,7 +5,7 @@ import pandas as pd
 from utils.styles import render_header
 
 def show_view():
-    render_header("📊 บทสรุปผู้บริหาร (Executive Summary)", border_color="#00BCD4")
+    render_header("สำนัก ช.พ.ค. - ช.พ.ส", border_color="#00BCD4")
     
     if 'df_eis' not in st.session_state or st.session_state['df_eis'].empty:
         st.error("⚠️ ไม่พบข้อมูล EIS_Data ใน Excel")
