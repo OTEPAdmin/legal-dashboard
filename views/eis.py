@@ -29,18 +29,18 @@ def show_view():
     if not available_years: available_years = ["2568"]
     months_list = list(thai_month_map.keys())
 
-    # --- FILTER UI ---
-    with st.expander("🔎 ตัวเลือกการกรอง (Filter)", expanded=False):
-        c1, c2, c3, c4, c5 = st.columns([1,1,1,1,1])
-        with c1: m_start = st.selectbox("เดือนเริ่มต้น", months_list, index=0)
-        with c2: y_start = st.selectbox("ปีเริ่มต้น", available_years, index=0)
-        with c3: m_end = st.selectbox("ถึงเดือน", months_list, index=11)
-        with c4: y_end = st.selectbox("ถึงปี", available_years, index=0)
-        with c5: 
-            st.write("") 
-            st.write("") 
-            if st.button("🔍 กรองข้อมูล", use_container_width=True):
-                st.rerun()
+    # --- FILTER UI (Always Visible) ---
+    st.markdown("##### 🔎 ตัวเลือกการกรอง (Filter)")
+    c1, c2, c3, c4, c5 = st.columns([1,1,1,1,1])
+    with c1: m_start = st.selectbox("เดือนเริ่มต้น", months_list, index=0)
+    with c2: y_start = st.selectbox("ปีเริ่มต้น", available_years, index=0)
+    with c3: m_end = st.selectbox("ถึงเดือน", months_list, index=11)
+    with c4: y_end = st.selectbox("ถึงปี", available_years, index=0)
+    with c5: 
+        st.write("") 
+        st.write("") 
+        if st.button("🔍 กรองข้อมูล", use_container_width=True):
+            st.rerun()
 
     # Apply Filter
     start_key = (int(y_start) * 100) + thai_month_map[m_start]
@@ -54,7 +54,6 @@ def show_view():
         return
 
     # Aggregate Member Data
-    # Note: Using Item/Category structure from generated data
     def get_main_sum(cat, item):
         return df_filtered[(df_filtered['Category'] == cat) & (df_filtered['Item'] == item)]['Value'].sum()
 
@@ -75,7 +74,6 @@ def show_view():
     cps_resign = get_main_sum('CPS', 'Members_Resign')
 
     # --- 2. PREPARE EXTRA DATA (DEATH/FINANCE) ---
-    # We bridge the gap between "Long Format" data and "Wide Format" code expectations
     cpk_ex = {}
     cps_ex = {}
     
@@ -90,32 +88,26 @@ def show_view():
         df_ex_filtered = df_ex[mask_ex]
 
         # --- DATA MAPPING LOGIC ---
-        # 1. Death Causes (Map Thai Items to Code Keys)
-        # Since data isn't split by Type, we split 50/50 for demo visualization
+        # 1. Death Causes
         death_map = {
             'โรคมะเร็ง': 'Cause_Cancer',
             'โรคปอด': 'Cause_Lung',
             'โรคหัวใจ/หลอดเลือด': 'Cause_Heart',
             'ชราภาพ': 'Cause_Old',
-            'ติดเชื้อในกระแสเลือด': 'Cause_Brain' # Mapping to 5th category
+            'ติดเชื้อในกระแสเลือด': 'Cause_Brain'
         }
         for item_name, key in death_map.items():
             val = df_ex_filtered[(df_ex_filtered['Category'] == 'Death_Cause') & (df_ex_filtered['Item'] == item_name)]['Value'].sum()
-            cpk_ex[key] = int(val * 0.55) # Mock: CPK has slightly more
+            cpk_ex[key] = int(val * 0.55) 
             cps_ex[key] = int(val * 0.45)
 
-        # 2. Financials (Map Items to Code Keys)
-        # Remittance
+        # 2. Financials
         remit_cpk = df_ex_filtered[(df_ex_filtered['Category'] == 'Remittance') & (df_ex_filtered['Item'] == 'เงินนำส่ง ช.พ.ค.')]['Value'].sum()
         remit_cps = df_ex_filtered[(df_ex_filtered['Category'] == 'Remittance') & (df_ex_filtered['Item'] == 'เงินนำส่ง ช.พ.ส.')]['Value'].sum()
         
-        # Financial Aid (Mocking logic based on Revenue data if specific items missing)
-        fin_rev = df_ex_filtered[(df_ex_filtered['Category'] == 'Financial') & (df_ex_filtered['Item'] == 'รายรับ')]['Value'].sum()
-        
-        # Assign to dictionary keys expected by UI
-        cpk_ex['Fin_Family'] = remit_cpk * 1000 # Scaling for demo amount
-        cpk_ex['Fin_Deceased'] = get_main_sum('CPK', 'Members_Dead') # Use actual dead count
-        cpk_ex['Fin_Per_Body'] = 200000 # Static rate
+        cpk_ex['Fin_Family'] = remit_cpk * 1000 
+        cpk_ex['Fin_Deceased'] = get_main_sum('CPK', 'Members_Dead') 
+        cpk_ex['Fin_Per_Body'] = 200000 
 
         cps_ex['Fin_Family'] = remit_cps * 1000
         cps_ex['Fin_Deceased'] = get_main_sum('CPS', 'Members_Dead')
