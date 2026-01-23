@@ -79,7 +79,9 @@ def show_view():
     cps_dead_val = get_sum('CPS', 'Members_Dead')
     cps_removed_total = cps_resign_val + cps_dead_val
 
-    # --- SECTION 1: EXECUTIVE SUMMARY (บทสรุปผู้บริหาร) ---
+    # =================================================================================================
+    # SECTION 1: EXECUTIVE SUMMARY (บทสรุปผู้บริหาร)
+    # =================================================================================================
     st.markdown("#### 📊 บทสรุปผู้บริหาร")
 
     # ROW 1: OVERVIEW CARDS
@@ -88,7 +90,7 @@ def show_view():
     # 1.1 CPK CARD
     with col_cpk:
         st.markdown(f"""
-        <div style="background-color:#E3F2FD; padding:15px; border-radius:10px; border-top: 5px solid #2196F3; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="background-color:#E3F2FD; padding:15px; border-radius:10px; border-top: 5px solid #2196F3; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-family: 'Kanit', sans-serif;">
             <div style="display:flex; justify-content:space-between; color:#555; font-weight:bold; margin-bottom:10px;">
                 <span>👥 ภาพรวมสมาชิก ช.พ.ค.</span>
                 <span style="font-size:12px; background:#BBDEFB; padding:2px 8px; border-radius:10px;">ปี {y_end}</span>
@@ -116,7 +118,7 @@ def show_view():
     # 1.2 CPS CARD
     with col_cps:
         st.markdown(f"""
-        <div style="background-color:#F3E5F5; padding:15px; border-radius:10px; border-top: 5px solid #9C27B0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="background-color:#F3E5F5; padding:15px; border-radius:10px; border-top: 5px solid #9C27B0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-family: 'Kanit', sans-serif;">
             <div style="display:flex; justify-content:space-between; color:#555; font-weight:bold; margin-bottom:10px;">
                 <span>👥 ภาพรวมสมาชิก ช.พ.ส.</span>
                 <span style="font-size:12px; background:#E1BEE7; padding:2px 8px; border-radius:10px;">ปี {y_end}</span>
@@ -143,12 +145,8 @@ def show_view():
 
     st.write("")
 
-    # ROW 2: BAR CHARTS (4 Columns)
-    # We break down the totals proportionally to match the visual requirement
-    # (Since current Excel only has totals, we simulate the sub-categories: Apply/Rejoin, Resign/Withdraw/Death)
-    
-    # --- Chart Logic Helper ---
-    def create_horiz_bar(values, labels, colors, title, key):
+    # ROW 2: BAR CHARTS
+    def create_horiz_bar(values, labels, colors, title):
         fig = go.Figure(go.Bar(
             x=values,
             y=labels,
@@ -159,26 +157,24 @@ def show_view():
             insidetextanchor='middle'
         ))
         fig.update_layout(
-            title=dict(text=title, font=dict(size=14), x=0),
+            title=dict(text=title, font=dict(size=14, family="Kanit"), x=0),
             height=150,
             margin=dict(l=0, r=0, t=30, b=0),
             xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
             yaxis=dict(showgrid=False, showline=False),
             plot_bgcolor='rgba(0,0,0,0)',
-            font_family="Kanit"
+            font=dict(family="Kanit")
         )
         return fig
 
     c1, c2, c3, c4 = st.columns(4)
 
-    # Chart 1: CPK Add (Breakdown: Apply 85%, Rejoin 15%)
     with c1:
         val_apply = int(cpk_new_total * 0.85)
         val_rejoin = cpk_new_total - val_apply
-        fig = create_horiz_bar([val_rejoin, val_apply], ['ขอกลับ', 'สมัคร'], ['#00ACC1', '#4CAF50'], "📈 สมาชิกเพิ่ม ช.พ.ค.", "cpk_add")
+        fig = create_horiz_bar([val_rejoin, val_apply], ['ขอกลับ', 'สมัคร'], ['#00ACC1', '#4CAF50'], "📈 สมาชิกเพิ่ม ช.พ.ค.")
         st.plotly_chart(fig, use_container_width=True)
 
-    # Chart 2: CPK Remove (Breakdown: Death is real, Resign split into Withdraw/Resign/Other)
     with c2:
         val_dead = int(cpk_dead_val)
         val_withdraw = int(cpk_resign_val * 0.5)
@@ -189,18 +185,16 @@ def show_view():
             [val_other, val_dead, val_resign, val_withdraw], 
             ['อื่นๆ', 'ตาย', 'ลาออก', 'ถอนชื่อ'], 
             ['#9E9E9E', '#E53935', '#8E24AA', '#FFB300'], 
-            "📉 จำหน่าย ช.พ.ค.", "cpk_rem"
+            "📉 จำหน่าย ช.พ.ค."
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # Chart 3: CPS Add
     with c3:
         val_apply = int(cps_new_total * 0.82)
         val_rejoin = cps_new_total - val_apply
-        fig = create_horiz_bar([val_rejoin, val_apply], ['ขอกลับ', 'สมัคร'], ['#AB47BC', '#66BB6A'], "📈 สมาชิกเพิ่ม ช.พ.ส.", "cps_add")
+        fig = create_horiz_bar([val_rejoin, val_apply], ['ขอกลับ', 'สมัคร'], ['#AB47BC', '#66BB6A'], "📈 สมาชิกเพิ่ม ช.พ.ส.")
         st.plotly_chart(fig, use_container_width=True)
 
-    # Chart 4: CPS Remove
     with c4:
         val_dead = int(cps_dead_val)
         val_withdraw = int(cps_resign_val * 0.5)
@@ -211,13 +205,91 @@ def show_view():
             [val_other, val_dead, val_resign, val_withdraw], 
             ['อื่นๆ', 'ตาย', 'ลาออก', 'ถอนชื่อ'], 
             ['#9E9E9E', '#E53935', '#00ACC1', '#FFB300'], 
-            "📉 จำหน่าย ช.พ.ส.", "cps_rem"
+            "📉 จำหน่าย ช.พ.ส."
         )
         st.plotly_chart(fig, use_container_width=True)
 
     st.write("---")
 
+    # =================================================================================================
+    # SECTION 2: MEMBER DEMOGRAPHICS (ข้อมูลสมาชิก)
+    # =================================================================================================
+    st.markdown("#### 👥 ข้อมูลสมาชิก | DEMOGRAPHIC")
+
+    # --- Simulation Logic for Demographics (Proportional to Total) ---
+    # We use fixed ratios for demo visualization since raw data doesn't have this granularity
+    
+    # 1. Gender Ratio
+    cpk_male = int(cpk_total * 0.38)
+    cpk_female = cpk_total - cpk_male
+    
+    cps_male = int(cps_total * 0.42)
+    cps_female = cps_total - cps_male
+
+    # 2. Age Groups (<40, 40-49, 50-59, 60-69, >=70)
+    # Weights: [0.08, 0.18, 0.32, 0.28, 0.14] for CPK
+    # Weights: [0.05, 0.12, 0.25, 0.35, 0.23] for CPS
+    cpk_age_vals = [int(cpk_total*x) for x in [0.08, 0.18, 0.32, 0.28, 0.14]]
+    cps_age_vals = [int(cps_total*x) for x in [0.05, 0.12, 0.25, 0.35, 0.23]]
+    age_labels = ['<40', '40-49', '50-59', '60-69', '≥70']
+    age_colors = ['#29B6F6', '#66BB6A', '#FBC02D', '#AB47BC', '#FF7043']
+
+    # --- Layout ---
+    col_d1, col_d2, col_d3, col_d4 = st.columns(4)
+
+    # Function for Donut Chart (Gender)
+    def create_donut(male_val, female_val, title):
+        labels = ['ชาย', 'หญิง']
+        values = [male_val, female_val]
+        colors = ['#29B6F6', '#EC407A'] # Blue, Pink
+        
+        fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.5, marker_colors=colors, sort=False)])
+        fig.update_layout(
+            title=dict(text=title, font=dict(size=14, family="Kanit"), x=0),
+            height=200,
+            margin=dict(l=10, r=10, t=40, b=10),
+            showlegend=True,
+            legend=dict(orientation="h", y=-0.1, font=dict(family="Kanit"))
+        )
+        return fig
+
+    # Function for Bar Chart (Age)
+    def create_age_bar(values, title):
+        fig = go.Figure(go.Bar(
+            x=age_labels,
+            y=values,
+            marker_color=age_colors,
+            text=[f"{v:,}" for v in values],
+            textposition='auto'
+        ))
+        fig.update_layout(
+            title=dict(text=title, font=dict(size=14, family="Kanit"), x=0),
+            height=200,
+            margin=dict(l=10, r=10, t=40, b=10),
+            xaxis=dict(tickfont=dict(family="Kanit")),
+            yaxis=dict(showgrid=True, gridcolor='#eee'),
+            plot_bgcolor='white',
+            font=dict(family="Kanit")
+        )
+        return fig
+
+    # Render Cards
+    with col_d1:
+        st.plotly_chart(create_donut(cpk_male, cpk_female, "👫 สัดส่วนเพศ ช.พ.ค."), use_container_width=True)
+
+    with col_d2:
+        st.plotly_chart(create_age_bar(cpk_age_vals, "📊 กลุ่มอายุ ช.พ.ค."), use_container_width=True)
+
+    with col_d3:
+        st.plotly_chart(create_donut(cps_male, cps_female, "👫 สัดส่วนเพศ ช.พ.ส."), use_container_width=True)
+
+    with col_d4:
+        st.plotly_chart(create_age_bar(cps_age_vals, "📊 กลุ่มอายุ ช.พ.ส."), use_container_width=True)
+
+    st.write("---")
+
     # --- 3. PREPARE EXTRA DATA (DEATH/FINANCE) FOR NEXT SECTIONS ---
+    # (Keeping this logic ready for future sections)
     cpk_ex = {}
     cps_ex = {}
     
@@ -239,79 +311,3 @@ def show_view():
             val = df_ex_filtered[(df_ex_filtered['Category'] == 'Death_Cause') & (df_ex_filtered['Item'] == item_name)]['Value'].sum()
             cpk_ex[key] = int(val * 0.55) 
             cps_ex[key] = int(val * 0.45)
-
-        # Map Financials
-        remit_cpk = df_ex_filtered[(df_ex_filtered['Category'] == 'Remittance') & (df_ex_filtered['Item'] == 'เงินนำส่ง ช.พ.ค.')]['Value'].sum()
-        remit_cps = df_ex_filtered[(df_ex_filtered['Category'] == 'Remittance') & (df_ex_filtered['Item'] == 'เงินนำส่ง ช.พ.ส.')]['Value'].sum()
-        
-        cpk_ex['Fin_Family'] = remit_cpk * 1000 
-        cpk_ex['Fin_Deceased'] = cpk_dead_val 
-        cpk_ex['Fin_Per_Body'] = 200000 
-
-        cps_ex['Fin_Family'] = remit_cps * 1000
-        cps_ex['Fin_Deceased'] = cps_dead_val
-        cps_ex['Fin_Per_Body'] = 180000
-
-    # --- UI SECTION 2: CAUSES OF DEATH ---
-    st.markdown("##### ☠️ สาเหตุการเสียชีวิต")
-    d1, d2 = st.columns(2)
-    
-    death_labels = ["โรคมะเร็ง", "โรคปอด", "โรคหัวใจ", "โรคชรา", "ติดเชื้อฯ"]
-    death_colors = ['#FF7043', '#29B6F6', '#AB47BC', '#FFCA28', '#66BB6A'] 
-
-    with d1:
-        st.markdown("###### 📉 5 อันดับสาเหตุการเสียชีวิต ช.พ.ค.")
-        cpk_vals = [cpk_ex.get('Cause_Cancer',0), cpk_ex.get('Cause_Lung',0), cpk_ex.get('Cause_Heart',0), cpk_ex.get('Cause_Old',0), cpk_ex.get('Cause_Brain',0)]
-        if sum(cpk_vals) == 0: st.info("ไม่มีข้อมูล")
-        else:
-            fig = go.Figure(go.Bar(
-                x=cpk_vals, y=death_labels, orientation='h', 
-                marker_color=death_colors, text=cpk_vals, textposition='auto'
-            ))
-            fig.update_layout(height=250, margin=dict(l=0,r=0,t=0,b=0), font_family="Kanit", yaxis=dict(autorange="reversed"))
-            st.plotly_chart(fig, use_container_width=True, key="cpk_death")
-
-    with d2:
-        st.markdown("###### 📉 5 อันดับสาเหตุการเสียชีวิต ช.พ.ส.")
-        cps_vals = [cps_ex.get('Cause_Cancer',0), cps_ex.get('Cause_Lung',0), cps_ex.get('Cause_Heart',0), cps_ex.get('Cause_Old',0), cps_ex.get('Cause_Brain',0)]
-        if sum(cps_vals) == 0: st.info("ไม่มีข้อมูล")
-        else:
-            fig = go.Figure(go.Bar(
-                x=cps_vals, y=death_labels, orientation='h', 
-                marker_color=death_colors, text=cps_vals, textposition='auto'
-            ))
-            fig.update_layout(height=250, margin=dict(l=0,r=0,t=0,b=0), font_family="Kanit", yaxis=dict(autorange="reversed"))
-            st.plotly_chart(fig, use_container_width=True, key="cps_death")
-
-    st.write("---")
-
-    # --- UI SECTION 3: FINANCIAL CONTRIBUTION ---
-    st.markdown("##### 💳 การนำส่งเงิน & งบการเงิน")
-    f1, f2 = st.columns(2)
-
-    def fin_card(title, count, per_body, total_fam, bg_color="#E0F7FA"):
-        st.markdown(f"""
-        <div style="background:{bg_color}; padding:15px; border-radius:10px; margin-bottom:20px;">
-            <h5 style="margin-bottom:15px; color:#555;">💰 {title}</h5>
-            <div style="display:flex; gap:10px;">
-                <div style="flex:1; background:#00ACC1; padding:10px; border-radius:8px; text-align:center; color:white;">
-                    <div style="font-size:11px;">จำนวนผู้วายชนม์</div>
-                    <div style="font-size:22px; font-weight:bold;">{int(count):,} <span style="font-size:12px;">ราย</span></div>
-                </div>
-                <div style="flex:1; background:#66BB6A; padding:10px; border-radius:8px; text-align:center; color:white;">
-                    <div style="font-size:11px;">เงินสงเคราะห์รายศพ</div>
-                    <div style="font-size:22px; font-weight:bold;">{int(per_body):,}.-</div>
-                </div>
-                <div style="flex:1.2; background:#FBC02D; padding:10px; border-radius:8px; text-align:center; color:white;">
-                    <div style="font-size:11px;">เงินสงเคราะห์ครอบครัว</div>
-                    <div style="font-size:22px; font-weight:bold;">{int(total_fam):,}-.</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with f1:
-        fin_card("เงินสงเคราะห์ ช.พ.ค.", cpk_ex.get('Fin_Deceased',0), cpk_ex.get('Fin_Per_Body',0), cpk_ex.get('Fin_Family',0), "#E0F7FA")
-
-    with f2:
-        fin_card("เงินสงเคราะห์ ช.พ.ส.", cps_ex.get('Fin_Deceased',0), cps_ex.get('Fin_Per_Body',0), cps_ex.get('Fin_Family',0), "#F3E5F5")
