@@ -1,46 +1,57 @@
 import streamlit as st
-import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
+import plotly.express as px
 from utils.styles import render_header
 
 def show_view():
-    render_header("สำนัก ช.พ.ค. - ช.พ.ส", border_color="#00BCD4")
+    render_header("สำนัก ช.พ.ค. - ช.พ.ส", border_color="#FF9800")
     
-    if 'df_eis' not in st.session_state or st.session_state['df_eis'].empty:
-        st.error("⚠️ ไม่พบข้อมูล EIS_Data ใน Excel")
+    # 1. CHECK DATA SOURCES
+    if 'df_eis' not in st.session_state:
+        st.error("⚠️ ไม่พบข้อมูล EIS_Data (กรุณาอัปโหลดไฟล์)")
         return
 
-    df = st.session_state['df_eis'].copy()
+    # 2. COMBINE DATA (EIS_Data + EIS_Extra)
+    df_main = st.session_state['df_eis'].copy() # Members Data
+    
+    df_extra = pd.DataFrame()
+    if 'df_eis_extra' in st.session_state:
+        df_extra = st.session_state['df_eis_extra'].copy() # Death/Finance/Remittance
+    
+    # Merge them into one dataframe for easier filtering
+    df = pd.concat([df_main, df_extra], ignore_index=True)
 
-    # --- FILTER LOGIC ---
+    # 3. FILTER LOGIC
     thai_month_map = {
         "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4, "พฤษภาคม": 5, "มิถุนายน": 6,
         "กรกฎาคม": 7, "สิงหาคม": 8, "กันยายน": 9, "ตุลาคม": 10, "พฤศจิกายน": 11, "ธันวาคม": 12
     }
     
-    df['YearNum'] = pd.to_numeric(df['Year'], errors='coerce').fillna(0).astype(int)
-    df['MonthNum'] = df['Month'].map(thai_month_map).fillna(0).astype(int)
-    df['SortKey'] = (df['YearNum'] * 100) + df['MonthNum']
+    # Ensure SortKey exists
+    if 'SortKey' not in df.columns:
+        df['YearNum'] = pd.to_numeric(df['Year'], errors='coerce').fillna(0).astype(int)
+        df['MonthNum'] = df['Month'].map(thai_month_map).fillna(0).astype(int)
+        df['SortKey'] = (df['YearNum'] * 100) + df['MonthNum']
 
     available_years = sorted(df['Year'].unique(), reverse=True)
-    if not available_years: available_years = ["2568"]
     months_list = list(thai_month_map.keys())
 
-    c1, c2, c3, c4, c5 = st.columns([1,1,1,1,1])
-    with c1: m_start = st.selectbox("เดือนเริ่มต้น", months_list, index=0)
-    with c2: y_start = st.selectbox("ปีเริ่มต้น", available_years, index=0)
-    with c3: m_end = st.selectbox("ถึงเดือน", months_list, index=11)
-    with c4: y_end = st.selectbox("ถึงปี", available_years, index=0)
-    with c5: 
-        st.write("") 
-        st.write("") 
-        if st.button("🔍 กรองข้อมูล", use_container_width=True):
-            st.rerun()
+    # Filter UI
+    with st.expander("🔎 ตัวเลือกการกรอง (Filter)", expanded=False):
+        c1, c2, c3, c4, c5 = st.columns([1,1,1,1,1])
+        with c1: m_start = st.selectbox("เดือนเริ่มต้น", months_list, index=0)
+        with c2: y_start = st.selectbox("ปีเริ่มต้น", available_years, index=0)
+        with c3: m_end = st.selectbox("ถึงเดือน", months_list, index=11)
+        with c4: y_end = st.selectbox("ถึงปี", available_years, index=0)
+        with c5: 
+            st.write("") 
+            st.write("") 
+            if st.button("🔍 กรองข้อมูล", use_container_width=True):
+                st.rerun()
 
+    # Apply Filter
     start_key = (int(y_start) * 100) + thai_month_map[m_start]
     end_key = (int(y_end) * 100) + thai_month_map[m_end]
-    
     mask = (df['SortKey'] >= start_key) & (df['SortKey'] <= end_key)
     df_filtered = df[mask]
     
@@ -48,179 +59,73 @@ def show_view():
         st.warning(f"ไม่พบข้อมูลในช่วงเวลา: {m_start} {y_start} - {m_end} {y_end}")
         return
 
-    # Aggregate Data
-    sum_cols = ['CPK_New', 'CPK_Resign', 'CPS_New', 'CPS_Resign']
-    sums = df_filtered[sum_cols].sum()
-    latest_row = df_filtered.sort_values('SortKey', ascending=False).iloc[0]
+    # --- ROW 1: MEMBER CARDS (Read from EIS_Data) ---
+    latest_key = df_filtered['SortKey'].max()
+    df_snap = df_filtered[df_filtered['SortKey'] == latest_key]
     
-    cpk_total = latest_row['CPK_Total']
-    cps_total = latest_row['CPS_Total']
+    def get_val(cat, item):
+        val = df_snap[(df_snap['Category'] == cat) & (df_snap['Item'] == item)]['Value'].sum()
+        return val
 
-    # --- EIS Extra Data (For Death & Finance) ---
-    extra_sums = {}
-    if 'df_eis_extra' in st.session_state and not st.session_state['df_eis_extra'].empty:
-        df_ex = st.session_state['df_eis_extra'].copy()
-        df_ex['YearNum'] = pd.to_numeric(df_ex['Year'], errors='coerce').fillna(0).astype(int)
-        df_ex['MonthNum'] = df_ex['Month'].map(thai_month_map).fillna(0).astype(int)
-        df_ex['SortKey'] = (df_ex['YearNum'] * 100) + df_ex['MonthNum']
-        
-        mask_ex = (df_ex['SortKey'] >= start_key) & (df_ex['SortKey'] <= end_key)
-        df_ex_filtered = df_ex[mask_ex]
-        
-        # Split by Type
-        cpk_ex = df_ex_filtered[df_ex_filtered['Type'] == 'CPK'].sum(numeric_only=True)
-        cps_ex = df_ex_filtered[df_ex_filtered['Type'] == 'CPS'].sum(numeric_only=True)
-    else:
-        # Fallback zeros AND define empty dataframe to prevent crash
-        cpk_ex = pd.Series(0, index=['Cause_Cancer','Cause_Lung','Cause_Heart','Cause_Old','Cause_Brain','Fin_Deceased','Fin_Per_Body','Fin_Family'])
-        cps_ex = cpk_ex.copy()
-        df_ex_filtered = pd.DataFrame(columns=['Type', 'Fin_Per_Body']) # <--- FIX ADDED HERE
+    cpk_mem = get_val('CPK', 'Members_Total')
+    cps_mem = get_val('CPS', 'Members_Total')
 
-    # --- UI SECTION 1: MEMBERS ---
-    st.markdown("##### 👥 ภาพรวมสมาชิก")
     c1, c2 = st.columns(2)
-
     with c1:
-        st.markdown(f"""
-        <div style="background:#E0F7FA; padding:20px; border-radius:10px; border-top: 5px solid #00BCD4; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h4 style="margin:0; color:#006064;">👥 ภาพรวมสมาชิก ช.พ.ค.</h4>
-                <span style="background:white; padding:2px 8px; border-radius:10px; font-size:12px; color:#00838F;">ปี {y_end}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:15px;">
-                <div style="text-align:center;">
-                    <div style="font-size:38px; font-weight:bold; color:#00BCD4;">{int(cpk_total):,}</div>
-                    <div style="font-size:12px; color:#555;">จำนวนสมาชิก</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="font-size:24px; font-weight:bold; color:#4CAF50;">+{int(sums['CPK_New']):,}</div>
-                    <div style="font-size:12px; color:#555;">สมาชิกเพิ่ม</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="font-size:24px; font-weight:bold; color:#F44336;">-{int(sums['CPK_Resign']):,}</div>
-                    <div style="font-size:12px; color:#555;">จำหน่าย</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
+        st.markdown(f"""<div style="background:#E3F2FD; padding:15px; border-radius:10px; border-left:5px solid #2196F3;">
+            <h4 style="margin:0; color:#1565C0;">👥 สมาชิก ช.พ.ค.</h4>
+            <h1 style="margin:0; color:#0D47A1;">{int(cpk_mem):,}</h1></div>""", unsafe_allow_html=True)
     with c2:
-        st.markdown(f"""
-        <div style="background:#F3E5F5; padding:20px; border-radius:10px; border-top: 5px solid #AB47BC; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h4 style="margin:0; color:#4A148C;">👥 ภาพรวมสมาชิก ช.พ.ส.</h4>
-                <span style="background:white; padding:2px 8px; border-radius:10px; font-size:12px; color:#6A1B9A;">ปี {y_end}</span>
-            </div>
-             <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:15px;">
-                <div style="text-align:center;">
-                    <div style="font-size:38px; font-weight:bold; color:#AB47BC;">{int(cps_total):,}</div>
-                    <div style="font-size:12px; color:#555;">จำนวนสมาชิก</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="font-size:24px; font-weight:bold; color:#4CAF50;">+{int(sums['CPS_New']):,}</div>
-                    <div style="font-size:12px; color:#555;">สมาชิกเพิ่ม</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="font-size:24px; font-weight:bold; color:#F44336;">-{int(sums['CPS_Resign']):,}</div>
-                    <div style="font-size:12px; color:#555;">จำหน่าย</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
+        st.markdown(f"""<div style="background:#F3E5F5; padding:15px; border-radius:10px; border-left:5px solid #9C27B0;">
+            <h4 style="margin:0; color:#6A1B9A;">👥 สมาชิก ช.พ.ส.</h4>
+            <h1 style="margin:0; color:#4A148C;">{int(cps_mem):,}</h1></div>""", unsafe_allow_html=True)
+    
     st.write("---")
 
-    # --- UI SECTION 2: CHARTS & DEMO ---
-    cpk_new_total = int(sums['CPK_New'])
-    cpk_resign_total = int(sums['CPK_Resign'])
+    # --- ROW 2: CAUSE OF DEATH & FINANCIALS (Read from EIS_Extra) ---
+    col1, col2 = st.columns([1, 1])
     
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.markdown("###### 📉 สมาชิกเพิ่ม ช.พ.ค.")
-        fig = go.Figure(go.Bar(x=[cpk_new_total*0.8, cpk_new_total*0.2], y=['สมัคร', 'ขอกลับ'], orientation='h', marker_color=['#4CAF50', '#00ACC1']))
-        fig.update_layout(height=120, margin=dict(l=0,r=0,t=0,b=0), font_family="Kanit")
-        st.plotly_chart(fig, use_container_width=True)
-    with col_b:
-        st.markdown("###### 📉 จำหน่าย ช.พ.ค.")
-        fig = go.Figure(go.Bar(x=[cpk_resign_total], y=['จำหน่าย'], orientation='h', marker_color=['#F44336']))
-        fig.update_layout(height=120, margin=dict(l=0,r=0,t=0,b=0), font_family="Kanit")
-        st.plotly_chart(fig, use_container_width=True)
-
-    st.write("---")
-    
-    # --- UI SECTION 3: CAUSES OF DEATH ---
-    st.markdown("##### ☠️ สาเหตุการเสียชีวิต")
-    
-    d1, d2 = st.columns(2)
-    
-    death_labels = ["โรคมะเร็ง", "โรคปอด", "โรคหัวใจ", "โรคชรา", "โรคสมอง"]
-    death_colors = ['#FF7043', '#29B6F6', '#AB47BC', '#FFCA28', '#66BB6A'] 
-
-    # CPK Death
-    with d1:
-        st.markdown("###### 📉 5 อันดับสาเหตุการเสียชีวิต ช.พ.ค.")
-        cpk_vals = [cpk_ex.get('Cause_Cancer',0), cpk_ex.get('Cause_Lung',0), cpk_ex.get('Cause_Heart',0), cpk_ex.get('Cause_Old',0), cpk_ex.get('Cause_Brain',0)]
-        fig = go.Figure(go.Bar(
-            x=cpk_vals, y=death_labels, orientation='h', 
-            marker_color=death_colors, text=cpk_vals, textposition='auto'
-        ))
-        fig.update_layout(height=250, margin=dict(l=0,r=0,t=0,b=0), font_family="Kanit", yaxis=dict(autorange="reversed"))
-        st.plotly_chart(fig, use_container_width=True, key="cpk_death")
-
-    # CPS Death
-    with d2:
-        st.markdown("###### 📉 5 อันดับสาเหตุการเสียชีวิต ช.พ.ส.")
-        cps_vals = [cps_ex.get('Cause_Cancer',0), cps_ex.get('Cause_Lung',0), cps_ex.get('Cause_Heart',0), cps_ex.get('Cause_Old',0), cps_ex.get('Cause_Brain',0)]
-        fig = go.Figure(go.Bar(
-            x=cps_vals, y=death_labels, orientation='h', 
-            marker_color=death_colors, text=cps_vals, textposition='auto'
-        ))
-        fig.update_layout(height=250, margin=dict(l=0,r=0,t=0,b=0), font_family="Kanit", yaxis=dict(autorange="reversed"))
-        st.plotly_chart(fig, use_container_width=True, key="cps_death")
-
-    st.write("---")
-
-    # --- UI SECTION 4: FINANCIAL CONTRIBUTION ---
-    st.markdown("##### 💳 การนำส่งเงิน & งบการเงิน")
-
-    f1, f2 = st.columns(2)
-
-    def fin_card(title, count, per_body, total_fam, bg_color="#E0F7FA"):
-        st.markdown(f"""
-        <div style="background:{bg_color}; padding:15px; border-radius:10px; margin-bottom:20px;">
-            <h5 style="margin-bottom:15px; color:#555;">💰 {title}</h5>
-            <div style="display:flex; gap:10px;">
-                <div style="flex:1; background:#00ACC1; padding:10px; border-radius:8px; text-align:center; color:white;">
-                    <div style="font-size:11px;">จำนวนผู้วายชนม์</div>
-                    <div style="font-size:22px; font-weight:bold;">{int(count):,} <span style="font-size:12px;">ราย</span></div>
-                </div>
-                <div style="flex:1; background:#66BB6A; padding:10px; border-radius:8px; text-align:center; color:white;">
-                    <div style="font-size:11px;">เงินสงเคราะห์รายศพ</div>
-                    <div style="font-size:22px; font-weight:bold;">{int(per_body):,}.-</div>
-                </div>
-                <div style="flex:1.2; background:#FBC02D; padding:10px; border-radius:8px; text-align:center; color:white;">
-                    <div style="font-size:11px;">เงินสงเคราะห์ครอบครัว</div>
-                    <div style="font-size:22px; font-weight:bold;">{int(total_fam):,}-.</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with f1:
-        # Check if filtered dataframe exists and has 'Type' column before filtering
-        rate = 0
-        if not df_ex_filtered.empty and 'Type' in df_ex_filtered.columns:
-             subset = df_ex_filtered[df_ex_filtered['Type'] == 'CPK']
-             if not subset.empty:
-                 rate = subset['Fin_Per_Body'].max()
+    with col1:
+        st.subheader("💀 สาเหตุการเสียชีวิต")
+        # Filter Category 'Death_Cause' (from EIS_Extra)
+        df_death = df_filtered[df_filtered['Category'] == 'Death_Cause']
         
-        fin_card("เงินสงเคราะห์ ช.พ.ค.", cpk_ex.get('Fin_Deceased',0), rate, cpk_ex.get('Fin_Family',0), "#E0F7FA")
+        if not df_death.empty:
+            df_death_agg = df_death.groupby("Item")['Value'].sum().reset_index().sort_values("Value", ascending=True)
+            fig_death = px.bar(df_death_agg, x='Value', y='Item', orientation='h', text='Value',
+                               color='Item', color_discrete_sequence=px.colors.qualitative.Pastel)
+            fig_death.update_layout(showlegend=False, height=350, xaxis_title="จำนวน (คน)", yaxis_title=None)
+            st.plotly_chart(fig_death, use_container_width=True)
+        else:
+            st.info("ไม่พบข้อมูลสาเหตุการเสียชีวิต (ตรวจสอบ Tab: EIS_Extra)")
 
-    with f2:
-        rate = 0
-        if not df_ex_filtered.empty and 'Type' in df_ex_filtered.columns:
-             subset = df_ex_filtered[df_ex_filtered['Type'] == 'CPS']
-             if not subset.empty:
-                 rate = subset['Fin_Per_Body'].max()
+    with col2:
+        st.subheader("💰 งบการเงิน")
+        # Filter Category 'Financial' (from EIS_Extra)
+        df_fin = df_filtered[df_filtered['Category'] == 'Financial']
+        
+        if not df_fin.empty:
+            fig_fin = px.bar(df_fin, x='Month', y='Value', color='Item', barmode='group',
+                             color_discrete_map={'รายรับ': '#4CAF50', 'รายจ่าย': '#F44336'})
+            fig_fin.update_layout(height=350, xaxis_title=None, yaxis_title="ล้านบาท")
+            st.plotly_chart(fig_fin, use_container_width=True)
+        else:
+            st.info("ไม่พบข้อมูลเกี่ยวงบการเงิน (ตรวจสอบ Tab: EIS_Extra)")
 
-        fin_card("เงินสงเคราะห์ ช.พ.ส.", cps_ex.get('Fin_Deceased',0), rate, cps_ex.get('Fin_Family',0), "#F3E5F5")
+    st.write("---")
+
+    # --- ROW 3: REMITTANCE (Read from EIS_Extra) ---
+    st.subheader("💸 การนำส่งเงิน")
+    # Filter Category 'Remittance' (from EIS_Extra)
+    df_remit = df_filtered[df_filtered['Category'] == 'Remittance']
+    
+    if not df_remit.empty:
+        df_remit['MonthNum'] = df_remit['Month'].map(thai_month_map)
+        df_remit = df_remit.sort_values(['Year', 'MonthNum'])
+        
+        fig_remit = px.area(df_remit, x='Month', y='Value', color='Item', 
+                            color_discrete_map={'เงินนำส่ง ช.พ.ค.': '#2196F3', 'เงินนำส่ง ช.พ.ส.': '#9C27B0'})
+        fig_remit.update_layout(height=400, xaxis_title="เดือน", yaxis_title="จำนวนเงิน (ล้านบาท)")
+        st.plotly_chart(fig_remit, use_container_width=True)
+    else:
+        st.info("ไม่พบข้อมูลการนำส่งเงิน (ตรวจสอบ Tab: EIS_Extra)")
