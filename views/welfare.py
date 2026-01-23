@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from utils.styles import render_header
 
 def show_view():
-    render_header("🎁 สวัสดิการ (Welfare)", border_color="#8BC34A")
+    render_header("สำนักสวัสดิการ", border_color="#8BC34A")
     
     if 'df_welfare' not in st.session_state or st.session_state['df_welfare'].empty:
         st.error("⚠️ ไม่พบข้อมูล Welfare_Data ใน Excel")
