@@ -289,27 +289,42 @@ else:
     }
 
     # --- RENDER SIDEBAR ---
-    # ... (Imports) ...
-    from utils.config_manager import is_dashboard_visible # <--- Add this import at the top
-
-    # ... (Inside the sidebar rendering block) ...
-
-    # --- RENDER SIDEBAR ---
     st.sidebar.markdown("### 📊 เมนู Dashboard")
-    
     for name in available_dashboards.keys():
-        # Check Visibility
-        should_show, is_public = is_dashboard_visible(name, st.session_state.role)
-        
-        if should_show:
-            # Change label for Admins if hidden
-            label = name
-            if not is_public:
-                label = f"🚫 {name} (Hidden)"
-            
-            if st.sidebar.button(label, use_container_width=True, type="primary" if st.session_state.current_view == name else "secondary"):
+        if st.sidebar.button(name, use_container_width=True, type="primary" if st.session_state.current_view == name else "secondary"):
+            st.session_state.current_view = name
+            st.rerun()
+
+    if st.session_state.role == "Admin":
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("### ⚙️ เมนูการจัดการ")
+        for name in admin_map.keys():
+            if st.sidebar.button(name, use_container_width=True, type="primary" if st.session_state.current_view == name else "secondary"):
                 st.session_state.current_view = name
                 st.rerun()
+        
+        st.sidebar.markdown("---")
+        if st.sidebar.button("🚪 ออกจากระบบ (Log off)", use_container_width=True, type="secondary"):
+            log_action(st.session_state.username, "Logout", "User Initiated")
+            st.session_state.logged_in = False
+            st.session_state.role = None
+            st.session_state.allowed_views = []
+            st.session_state.login_stage = "credentials" 
+            try: cookie_manager.delete("user_session")
+            except: pass
+            time.sleep(0.1) 
+            st.rerun()
+
+    elif st.sidebar.button("🚪 ออกจากระบบ (Log off)", use_container_width=True):
+        log_action(st.session_state.username, "Logout", "User Initiated")
+        st.session_state.logged_in = False
+        st.session_state.role = None
+        st.session_state.allowed_views = []
+        st.session_state.login_stage = "credentials"
+        try: cookie_manager.delete("user_session")
+        except: pass
+        time.sleep(0.1) 
+        st.rerun()
 
     # --- RENDER MAIN CONTENT ---
     if 'df_eis' not in st.session_state: load_from_disk()
@@ -332,4 +347,3 @@ else:
         if available_dashboards:
             st.session_state.current_view = list(available_dashboards.keys())[0]
             st.rerun()
-
