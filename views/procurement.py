@@ -104,8 +104,11 @@ def show_view():
         st.subheader("📦 สัดส่วนการจัดซื้อ (By Item)")
         df_items = df_filtered[df_filtered['Category'] == 'Procurement']
         if not df_items.empty:
+            # FIX: Define custom brown colors manually
+            custom_browns = ['#5D4037', '#795548', '#8D6E63', '#A1887F', '#BCAAA4', '#D7CCC8']
+            
             fig = px.pie(df_items, values='Value', names='Item', hole=0.4,
-                         color_discrete_sequence=px.colors.sequential.Brown)
+                         color_discrete_sequence=custom_browns)
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("ไม่มีข้อมูลประเภทการจัดซื้อ")
