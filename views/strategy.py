@@ -20,33 +20,44 @@ def show_view():
         st.error(f"❌ ข้อมูลไม่ถูกต้อง: ไม่พบคอลัมน์ {missing_cols}")
         return
 
-    # --- YEAR COMPARISON FILTER ---
-    available_years = sorted(df['Year'].unique(), reverse=True)
-    if not available_years: available_years = ["2568"]
+    # --- YEAR FILTER SETUP ---
+    # Enforce 2566, 2567, 2568 are available options
+    target_years = ["2568", "2567", "2566"]
+    actual_years = [str(y) for y in df['Year'].unique()] # Ensure string format
     
+    # Merge and Sort (Unique years only)
+    available_years = sorted(list(set(target_years + actual_years)), reverse=True)
+    
+    # --- FILTER UI ---
+    st.markdown("##### 🔎 ตัวเลือกเปรียบเทียบ (Comparison Filter)")
     col_filter1, col_filter2, col_blank = st.columns([1, 1, 3])
+    
     with col_filter1:
+        # Default to 2568 (First item)
         selected_year = st.selectbox("📅 ปีงบประมาณ (Fiscal Year)", available_years, index=0)
+    
     with col_filter2:
-        # Default compare year is the previous year (if exists)
+        # Default to 2567 (Second item if available) for comparison
         default_comp_idx = 1 if len(available_years) > 1 else 0
         compare_year = st.selectbox("⚖️ เปรียบเทียบกับ (Compare with)", available_years, index=default_comp_idx)
 
-    # Filter Dataframes
+    # --- FILTER LOGIC ---
+    # Filter Dataframes based on selection
     df_curr = df[df['Year'] == str(selected_year)]
     df_prev = df[df['Year'] == str(compare_year)]
 
     if df_curr.empty:
-        st.warning(f"⚠️ ไม่พบข้อมูลสำหรับปี {selected_year}")
-        return
-
-    # Helper function to get comparison value
+        st.warning(f"⚠️ ไม่พบข้อมูลสำหรับปี {selected_year} ในไฟล์ Excel")
+        # We don't return here to allow seeing the UI, but graphs will be empty
+    
+    # Helper to calculate Delta
     def get_delta(cat, item, subitem):
         try:
             val_curr = df_curr[(df_curr['Category']==cat) & (df_curr['Item']==item) & (df_curr['SubItem']==subitem)]['Value'].sum()
             val_prev = df_prev[(df_prev['Category']==cat) & (df_prev['Item']==item) & (df_prev['SubItem']==subitem)]['Value'].sum()
             
-            if val_prev == 0: return val_curr, 0
+            # If previous year is 0, we can't calculate % change properly
+            if val_prev == 0: return val_curr, 0.0
             
             delta_percent = ((val_curr - val_prev) / val_prev) * 100
             return val_curr, delta_percent
@@ -56,8 +67,9 @@ def show_view():
     # --- ROW 1: OVERVIEW CARDS ---
     c1, c2, c3 = st.columns(3)
 
-    # 1.1 Revenue
+    # 1.1 Revenue Card
     rev_act, rev_delta = get_delta('Overview', 'Revenue_Total', 'Actual')
+    # Plan comes from current year
     rev_plan = df_curr[(df_curr['Category']=='Overview') & (df_curr['Item']=='Revenue_Total') & (df_curr['SubItem']=='Plan')]['Value'].sum()
     
     with c1:
@@ -74,7 +86,7 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # 1.2 Expense
+    # 1.2 Expense Card
     exp_act, exp_delta = get_delta('Overview', 'Expense_Total', 'Actual')
     exp_bud = df_curr[(df_curr['Category']=='Overview') & (df_curr['Item']=='Expense_Total') & (df_curr['SubItem']=='Budget')]['Value'].sum()
 
@@ -92,7 +104,7 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # 1.3 Net Revenue
+    # 1.3 Net Revenue Card
     net_act, net_delta = get_delta('Overview', 'Net_Revenue', 'Actual')
 
     with c3:
@@ -111,7 +123,7 @@ def show_view():
 
     st.write("---")
 
-    # --- ROW 2: BAR CHARTS (Use Data from Selected Year) ---
+    # --- ROW 2: BAR CHARTS (Dynamic Update) ---
     c_left, c_right = st.columns(2)
 
     with c_left:
@@ -122,6 +134,8 @@ def show_view():
                          color_discrete_map={'งบประมาณ': '#ADD8E6', 'เบิกจ่ายจริง': '#4CAF50'})
             fig.update_layout(xaxis_title=None, yaxis_title=None, legend_title=None, height=350, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info(f"ไม่มีข้อมูลกราฟสำหรับปี {selected_year}")
 
     with c_right:
         st.markdown(f"**📊 รายรับตามประเภท (ปี {selected_year})**")
@@ -131,15 +145,18 @@ def show_view():
                          color_discrete_map={'แผน': '#ADD8E6', 'ผล': '#4CAF50'})
             fig.update_layout(xaxis_title=None, yaxis_title=None, legend_title=None, height=350, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info(f"ไม่มีข้อมูลกราฟสำหรับปี {selected_year}")
 
     st.write("---")
 
     # --- ROW 3: KPI STATUS ---
     k1, k2, k3, k4 = st.columns(4)
 
-    # K1: Success Rate (Big Green)
-    rate_val = df_curr[(df_curr['Category']=='KPI_Main')]['Value'].sum()
-    rate_note = df_curr[(df_curr['Category']=='KPI_Main')]['Note'].iloc[0] if not df_curr[(df_curr['Category']=='KPI_Main')].empty else ""
+    # Get data specifically for the selected year
+    kpi_main_row = df_curr[df_curr['Category']=='KPI_Main']
+    rate_val = kpi_main_row['Value'].sum() if not kpi_main_row.empty else 0
+    rate_note = kpi_main_row['Note'].iloc[0] if not kpi_main_row.empty else ""
     
     with k1:
         st.markdown(f"""
@@ -152,10 +169,11 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # Helper for small cards
+    # Helper for small status cards
     def status_card(col, title, item_name, color):
-        val = df_curr[(df_curr['Category']=='KPI_Sub') & (df_curr['Item']==item_name)]['Value'].sum()
-        note = df_curr[(df_curr['Category']=='KPI_Sub') & (df_curr['Item']==item_name)]['Note'].iloc[0] if not df_curr[(df_curr['Category']=='KPI_Sub') & (df_curr['Item']==item_name)].empty else ""
+        row = df_curr[(df_curr['Category']=='KPI_Sub') & (df_curr['Item']==item_name)]
+        val = row['Value'].sum() if not row.empty else 0
+        note = row['Note'].iloc[0] if not row.empty else ""
         col.markdown(f"""
         <div style="background:white; padding:20px; border-radius:10px; border:1px solid #eee; text-align:center; height:150px;">
             <div style="font-size:14px; color:#555;">{title}</div>
@@ -181,6 +199,8 @@ def show_view():
             fig.update_traces(marker_color='#66BB6A', textposition='inside')
             fig.update_layout(xaxis_title=None, yaxis_title=None, height=300, xaxis_range=[0,105], font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
+        else:
+             st.info("ไม่มีข้อมูล")
 
     with r2:
         st.markdown(f"**📉 Bottom 5 หน่วยงานต้องปรับปรุง (ปี {selected_year})**")
@@ -190,3 +210,5 @@ def show_view():
             fig.update_traces(marker_color='#FF9800', textposition='inside')
             fig.update_layout(xaxis_title=None, yaxis_title=None, height=300, xaxis_range=[0,105], font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
+        else:
+             st.info("ไม่มีข้อมูล")
