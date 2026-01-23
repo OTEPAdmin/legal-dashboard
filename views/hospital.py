@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from utils.styles import render_header
 
 def show_view():
-    render_header("🏥 โรงพยาบาล (Hospital Dashboard)", border_color="#00897B")
+    render_header("โรงพยาบาลครู", border_color="#00897B")
     
     if 'df_hospital' not in st.session_state or st.session_state['df_hospital'].empty:
         st.error("⚠️ ไม่พบข้อมูล Hospital_Data ใน Excel (Please add 'Hospital_Data' tab)")
