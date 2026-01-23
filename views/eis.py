@@ -6,20 +6,30 @@ from utils.styles import render_header
 def show_view():
     render_header("สำนัก ช.พ.ค. - ช.พ.ส", border_color="#FF9800")
     
-    # 1. CHECK DATA SOURCES
+    # 1. LOAD DATA
     if 'df_eis' not in st.session_state:
         st.error("⚠️ ไม่พบข้อมูล EIS_Data (กรุณาอัปโหลดไฟล์)")
         return
 
-    # 2. COMBINE DATA (EIS_Data + EIS_Extra)
-    df_main = st.session_state['df_eis'].copy() # Members Data
+    # Load Main Data (Members)
+    df_main = st.session_state['df_eis'].copy()
     
+    # Load Extra Data (Death, Finance, Remittance)
     df_extra = pd.DataFrame()
-    if 'df_eis_extra' in st.session_state:
-        df_extra = st.session_state['df_eis_extra'].copy() # Death/Finance/Remittance
+    if 'df_eis_extra' in st.session_state and not st.session_state['df_eis_extra'].empty:
+        df_extra = st.session_state['df_eis_extra'].copy()
     
-    # Merge them into one dataframe for easier filtering
+    # COMBINE THEM
     df = pd.concat([df_main, df_extra], ignore_index=True)
+
+    # --- CRITICAL SAFETY CHECK ---
+    required_cols = ['Year', 'Month', 'Category', 'Item', 'Value']
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        st.error(f"❌ ข้อมูลไม่ถูกต้อง: ไม่พบคอลัมน์ {missing} ในไฟล์ Excel")
+        st.info("💡 กรุณากดปุ่ม 'Reset EIS Data' ที่เมนู Admin เพื่อซ่อมไฟล์")
+        return
+    # -----------------------------
 
     # 3. FILTER LOGIC
     thai_month_map = {
