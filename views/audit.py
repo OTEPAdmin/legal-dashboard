@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from utils.styles import render_header
 
 def show_view():
-    render_header("📊 สำนักตรวจสอบภายใน (Internal Audit Office)", border_color="#2C3E50")
+    render_header("หน่วยตรวจสอบภายใน", border_color="#2C3E50")
     
     # Check data
     if 'df_audit' not in st.session_state or st.session_state['df_audit'].empty:
