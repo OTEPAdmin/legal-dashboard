@@ -12,72 +12,105 @@ def show_view():
         return
 
     df = st.session_state['df_strategy'].copy()
+
+    # --- CRITICAL FIX: Check if columns exist ---
+    required_cols = ['Year', 'Category', 'Item', 'SubItem', 'Value', 'Note']
+    missing_cols = [c for c in required_cols if c not in df.columns]
+    
+    if missing_cols:
+        st.error(f"❌ ข้อมูลไม่ถูกต้อง: ไม่พบคอลัมน์ {missing_cols} ใน Tab 'Strategy_Data'")
+        st.info("💡 กรุณาตรวจสอบไฟล์ Excel ว่าหัวตาราง (Row 1) เขียนถูกต้อง: Year, Category, Item, SubItem, Value, Note")
+        return
+    # --------------------------------------------
     
     # Filter for 2568 (Current Year View)
     df = df[df['Year'] == '2568']
+
+    if df.empty:
+        st.warning("⚠️ ไม่พบข้อมูลสำหรับปี 2568")
+        return
 
     # --- ROW 1: OVERVIEW CARDS ---
     c1, c2, c3 = st.columns(3)
 
     # 1.1 Revenue
-    rev_act = df[(df['Category']=='Overview') & (df['Item']=='Revenue_Total') & (df['SubItem']=='Actual')]['Value'].sum()
-    rev_plan = df[(df['Category']=='Overview') & (df['Item']=='Revenue_Total') & (df['SubItem']=='Plan')]['Value'].sum()
-    rev_note = df[(df['Category']=='Overview') & (df['Item']=='Revenue_Total') & (df['SubItem']=='Actual')]['Note'].iloc[0]
-    
-    with c1:
-        st.markdown(f"""
-        <div style="background:white; padding:15px; border-radius:10px; border:1px solid #eee; height:140px;">
-            <div style="color:#666; font-size:14px;">รายรับรวม</div>
-            <div style="color:#4CAF50; font-size:32px; font-weight:bold;">{rev_act:,.2f} <span style="font-size:16px; color:#333;">ล้านบาท</span></div>
-            <div style="color:#FF9800; font-size:12px; margin-top:5px;">▲ {rev_note}</div>
-            <div style="display:flex; justify-content:space-between; font-size:11px; color:#999; margin-top:15px;">
-                <span>แผน</span><span>{rev_plan:,.2f} ล้านบาท</span>
+    # Use .get() or check empty to prevent errors if specific rows are missing
+    try:
+        rev_act_row = df[(df['Category']=='Overview') & (df['Item']=='Revenue_Total') & (df['SubItem']=='Actual')]
+        rev_plan_row = df[(df['Category']=='Overview') & (df['Item']=='Revenue_Total') & (df['SubItem']=='Plan')]
+        
+        rev_act = rev_act_row['Value'].sum() if not rev_act_row.empty else 0
+        rev_plan = rev_plan_row['Value'].sum() if not rev_plan_row.empty else 0
+        rev_note = rev_act_row['Note'].iloc[0] if not rev_act_row.empty else "-"
+
+        with c1:
+            st.markdown(f"""
+            <div style="background:white; padding:15px; border-radius:10px; border:1px solid #eee; height:140px;">
+                <div style="color:#666; font-size:14px;">รายรับรวม</div>
+                <div style="color:#4CAF50; font-size:32px; font-weight:bold;">{rev_act:,.2f} <span style="font-size:16px; color:#333;">ล้านบาท</span></div>
+                <div style="color:#FF9800; font-size:12px; margin-top:5px;">▲ {rev_note}</div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:#999; margin-top:15px;">
+                    <span>แผน</span><span>{rev_plan:,.2f} ล้านบาท</span>
+                </div>
+                 <div style="display:flex; justify-content:space-between; font-size:11px; color:#4CAF50;">
+                    <span>ผล</span><span>{rev_act:,.2f} ล้านบาท</span>
+                </div>
             </div>
-             <div style="display:flex; justify-content:space-between; font-size:11px; color:#4CAF50;">
-                <span>ผล</span><span>{rev_act:,.2f} ล้านบาท</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+    except Exception as e:
+        c1.error(f"Error loading Revenue: {e}")
 
     # 1.2 Expense
-    exp_act = df[(df['Category']=='Overview') & (df['Item']=='Expense_Total') & (df['SubItem']=='Actual')]['Value'].sum()
-    exp_bud = df[(df['Category']=='Overview') & (df['Item']=='Expense_Total') & (df['SubItem']=='Budget')]['Value'].sum()
-    exp_note = df[(df['Category']=='Overview') & (df['Item']=='Expense_Total') & (df['SubItem']=='Actual')]['Note'].iloc[0]
+    try:
+        exp_act_row = df[(df['Category']=='Overview') & (df['Item']=='Expense_Total') & (df['SubItem']=='Actual')]
+        exp_bud_row = df[(df['Category']=='Overview') & (df['Item']=='Expense_Total') & (df['SubItem']=='Budget')]
+        
+        exp_act = exp_act_row['Value'].sum() if not exp_act_row.empty else 0
+        exp_bud = exp_bud_row['Value'].sum() if not exp_bud_row.empty else 0
+        exp_note = exp_act_row['Note'].iloc[0] if not exp_act_row.empty else "-"
 
-    with c2:
-        st.markdown(f"""
-        <div style="background:white; padding:15px; border-radius:10px; border:1px solid #eee; height:140px;">
-            <div style="color:#666; font-size:14px;">รายจ่ายรวม</div>
-            <div style="color:#E91E63; font-size:32px; font-weight:bold;">{exp_act:,.2f} <span style="font-size:16px; color:#333;">ล้านบาท</span></div>
-            <div style="color:#FFC107; font-size:12px; margin-top:5px;">{exp_note}</div>
-            <div style="display:flex; justify-content:space-between; font-size:11px; color:#999; margin-top:15px;">
-                <span>งบประมาณ</span><span>{exp_bud:,.2f} ล้านบาท</span>
+        with c2:
+            st.markdown(f"""
+            <div style="background:white; padding:15px; border-radius:10px; border:1px solid #eee; height:140px;">
+                <div style="color:#666; font-size:14px;">รายจ่ายรวม</div>
+                <div style="color:#E91E63; font-size:32px; font-weight:bold;">{exp_act:,.2f} <span style="font-size:16px; color:#333;">ล้านบาท</span></div>
+                <div style="color:#FFC107; font-size:12px; margin-top:5px;">{exp_note}</div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:#999; margin-top:15px;">
+                    <span>งบประมาณ</span><span>{exp_bud:,.2f} ล้านบาท</span>
+                </div>
+                 <div style="display:flex; justify-content:space-between; font-size:11px; color:#E91E63;">
+                    <span>เบิกจ่าย</span><span>{exp_act:,.2f} ล้านบาท</span>
+                </div>
             </div>
-             <div style="display:flex; justify-content:space-between; font-size:11px; color:#E91E63;">
-                <span>เบิกจ่าย</span><span>{exp_act:,.2f} ล้านบาท</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+    except:
+        c2.error("Error loading Expense")
 
     # 1.3 Net Revenue
-    net_act = df[(df['Category']=='Overview') & (df['Item']=='Net_Revenue') & (df['SubItem']=='Actual')]['Value'].sum()
-    net_last = df[(df['Category']=='Overview') & (df['Item']=='Net_Revenue') & (df['SubItem']=='LastYear')]['Value'].sum()
-    net_note = df[(df['Category']=='Overview') & (df['Item']=='Net_Revenue') & (df['SubItem']=='Actual')]['Note'].iloc[0]
+    try:
+        net_act_row = df[(df['Category']=='Overview') & (df['Item']=='Net_Revenue') & (df['SubItem']=='Actual')]
+        net_last_row = df[(df['Category']=='Overview') & (df['Item']=='Net_Revenue') & (df['SubItem']=='LastYear')]
+        
+        net_act = net_act_row['Value'].sum() if not net_act_row.empty else 0
+        net_last = net_last_row['Value'].sum() if not net_last_row.empty else 0
+        net_note = net_act_row['Note'].iloc[0] if not net_act_row.empty else "-"
 
-    with c3:
-        st.markdown(f"""
-        <div style="background:white; padding:15px; border-radius:10px; border:1px solid #eee; height:140px;">
-            <div style="color:#666; font-size:14px;">รายรับสุทธิ</div>
-            <div style="color:#00BCD4; font-size:32px; font-weight:bold;">{net_act:,.2f} <span style="font-size:16px; color:#333;">ล้านบาท</span></div>
-            <div style="color:#009688; font-size:12px; margin-top:5px;">▲ {net_note}</div>
-            <div style="display:flex; justify-content:space-between; font-size:11px; color:#999; margin-top:15px;">
-                <span>ปี 2567</span><span>{net_last:,.2f} ล้านบาท</span>
+        with c3:
+            st.markdown(f"""
+            <div style="background:white; padding:15px; border-radius:10px; border:1px solid #eee; height:140px;">
+                <div style="color:#666; font-size:14px;">รายรับสุทธิ</div>
+                <div style="color:#00BCD4; font-size:32px; font-weight:bold;">{net_act:,.2f} <span style="font-size:16px; color:#333;">ล้านบาท</span></div>
+                <div style="color:#009688; font-size:12px; margin-top:5px;">▲ {net_note}</div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:#999; margin-top:15px;">
+                    <span>ปี 2567</span><span>{net_last:,.2f} ล้านบาท</span>
+                </div>
+                 <div style="display:flex; justify-content:space-between; font-size:11px; color:#00BCD4;">
+                    <span>ปี 2568</span><span>{net_act:,.2f} ล้านบาท</span>
+                </div>
             </div>
-             <div style="display:flex; justify-content:space-between; font-size:11px; color:#00BCD4;">
-                <span>ปี 2568</span><span>{net_act:,.2f} ล้านบาท</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+    except:
+        c3.error("Error loading Net Revenue")
 
     st.write("---")
 
@@ -92,6 +125,8 @@ def show_view():
                          color_discrete_map={'งบประมาณ': '#ADD8E6', 'เบิกจ่ายจริง': '#4CAF50'})
             fig.update_layout(xaxis_title=None, yaxis_title=None, legend_title=None, height=350, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("ไม่มีข้อมูลกราฟรายจ่าย")
 
     with c_right:
         st.markdown("**📊 รายรับตามประเภท (ล้านบาท)**")
@@ -101,6 +136,8 @@ def show_view():
                          color_discrete_map={'แผน': '#ADD8E6', 'ผล': '#4CAF50'})
             fig.update_layout(xaxis_title=None, yaxis_title=None, legend_title=None, height=350, font_family="Kanit")
             st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("ไม่มีข้อมูลกราฟรายรับ")
 
     st.write("---")
 
@@ -108,31 +145,39 @@ def show_view():
     k1, k2, k3, k4 = st.columns(4)
 
     # K1: Success Rate (Big Green)
-    rate_val = df[(df['Category']=='KPI_Main')]['Value'].sum()
-    rate_note = df[(df['Category']=='KPI_Main')]['Note'].iloc[0]
-    
-    with k1:
-        st.markdown(f"""
-        <div style="background:white; padding:20px; border-radius:10px; border:1px solid #eee; text-align:center; height:150px;">
-            <div style="font-size:14px; color:#555;">อัตราความสำเร็จเฉลี่ย</div>
-            <div style="font-size:38px; font-weight:bold; color:#2E7D32;">{rate_val}%</div>
-            <div style="background:#E8F5E9; color:#2E7D32; border-radius:15px; padding:2px 10px; display:inline-block; font-size:12px; margin-top:5px;">
-                ↑ {rate_note}
+    try:
+        rate_row = df[(df['Category']=='KPI_Main')]
+        rate_val = rate_row['Value'].sum() if not rate_row.empty else 0
+        rate_note = rate_row['Note'].iloc[0] if not rate_row.empty else "-"
+        
+        with k1:
+            st.markdown(f"""
+            <div style="background:white; padding:20px; border-radius:10px; border:1px solid #eee; text-align:center; height:150px;">
+                <div style="font-size:14px; color:#555;">อัตราความสำเร็จเฉลี่ย</div>
+                <div style="font-size:38px; font-weight:bold; color:#2E7D32;">{rate_val}%</div>
+                <div style="background:#E8F5E9; color:#2E7D32; border-radius:15px; padding:2px 10px; display:inline-block; font-size:12px; margin-top:5px;">
+                    ↑ {rate_note}
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+    except:
+        k1.error("Error KPI")
 
     # Helper for small cards
     def status_card(col, title, item_name, color):
-        val = df[(df['Category']=='KPI_Sub') & (df['Item']==item_name)]['Value'].sum()
-        note = df[(df['Category']=='KPI_Sub') & (df['Item']==item_name)]['Note'].iloc[0]
-        col.markdown(f"""
-        <div style="background:white; padding:20px; border-radius:10px; border:1px solid #eee; text-align:center; height:150px;">
-            <div style="font-size:14px; color:#555;">{title}</div>
-            <div style="font-size:32px; font-weight:bold; color:{color}; margin-top:5px;">{int(val)}</div>
-            <div style="font-size:12px; color:#999; margin-top:5px;">{note}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        try:
+            row = df[(df['Category']=='KPI_Sub') & (df['Item']==item_name)]
+            val = row['Value'].sum() if not row.empty else 0
+            note = row['Note'].iloc[0] if not row.empty else "-"
+            col.markdown(f"""
+            <div style="background:white; padding:20px; border-radius:10px; border:1px solid #eee; text-align:center; height:150px;">
+                <div style="font-size:14px; color:#555;">{title}</div>
+                <div style="font-size:32px; font-weight:bold; color:{color}; margin-top:5px;">{int(val)}</div>
+                <div style="font-size:12px; color:#999; margin-top:5px;">{note}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        except:
+            col.error("Error")
 
     status_card(k2, "บรรลุเป้าหมาย", "Achieved", "#FF9800")
     status_card(k3, "ใกล้บรรลุ", "Near_Achieved", "#FFC107")
