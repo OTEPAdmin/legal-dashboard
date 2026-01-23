@@ -23,7 +23,8 @@ def load_from_disk():
     try:
         def load_sheet(name):
             try:
-                df = pd.read_excel(DATA_FILE, sheet_name=name)
+                # Use openpyxl engine for better compatibility
+                df = pd.read_excel(DATA_FILE, sheet_name=name, engine='openpyxl')
                 # Force string for Year to avoid comma formatting (e.g. 2,568)
                 if 'Year' in df.columns:
                     df['Year'] = df['Year'].astype(str)
@@ -33,6 +34,10 @@ def load_from_disk():
 
         # Load all sheets
         st.session_state['df_eis'] = load_sheet("EIS_Data")
+        
+        # ✅ FIX: Load the missing Extra Data for EIS Dashboard
+        st.session_state['df_eis_extra'] = load_sheet("EIS_Extra") 
+        
         st.session_state['df_rev'] = load_sheet("Revenue_Data")
         st.session_state['df_admin'] = load_sheet("Admin_Data")
         st.session_state['df_audit'] = load_sheet("Audit_Data")
@@ -43,10 +48,9 @@ def load_from_disk():
         st.session_state['df_welfare'] = load_sheet("Welfare_Data")
         st.session_state['df_dorm'] = load_sheet("Dorm_Data")
         st.session_state['df_procure'] = load_sheet("Procure_Data")
-        
-        # ✅ LOAD STRATEGY DATA
         st.session_state['df_strategy'] = load_sheet("Strategy_Data")
 
+        st.session_state['data_loaded'] = True
         return True
     except Exception as e:
         st.error(f"Error reading saved data: {e}")
