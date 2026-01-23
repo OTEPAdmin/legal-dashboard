@@ -8,16 +8,14 @@ def show_view():
     render_header("สำนักนโยบาย และยุทธศาสตร์", border_color="#2196F3")
 
     if 'df_strategy' not in st.session_state or st.session_state['df_strategy'].empty:
-        # Fallback Mock Data if Excel sheet missing
+        # Fallback Mock Data
         total_projects = 45
         completed = 38
         success_rate = 91.3
         budget_used = 85.5
     else:
-        # Simple logic if data exists (Modify as needed based on your real Excel columns)
         df = st.session_state['df_strategy']
         total_projects = len(df) if not df.empty else 45
-        # Mock calculation for demo purposes to match the request image
         completed = int(total_projects * 0.85)
         success_rate = 91.3 
         budget_used = 85.5
@@ -35,14 +33,13 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # Card 2: Success Rate (UPDATED STYLE HERE)
+    # Card 2: Success Rate (REVERTED TO STANDARD STYLE)
     with c2:
         st.markdown(f"""
         <div style="background:white; padding:20px; border-radius:10px; border-left:5px solid #4CAF50; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <div style="font-size:14px; color:#666; font-weight:bold;">อัตราความสำเร็จเฉลี่ย</div>
-            <div style="font-size:36px; font-weight:bold; color:#4CAF50;">{success_rate}%</div> <div style="font-size:12px; background:#E8F5E9; color:#2E7D32; padding:2px 8px; border-radius:10px; display:inline-block;">
-                ↑ 23 ตัวชี้วัด
-            </div>
+            <div style="font-size:14px; color:#666;">อัตราความสำเร็จเฉลี่ย</div>
+            <div style="font-size:28px; font-weight:bold; color:#333;">{success_rate}%</div>
+            <div style="font-size:12px; color:#888;">23 ตัวชี้วัด</div>
         </div>
         """, unsafe_allow_html=True)
 
