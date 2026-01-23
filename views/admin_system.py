@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 import json
-from utils.logger import get_logs, log_action
+from utils.logger import get_logs, log_action, clear_logs
 
 ANNOUNCEMENT_FILE = "data/announcement.json"
 
@@ -53,7 +53,18 @@ def show_view():
 
     # --- TAB 2: AUDIT LOGS ---
     with tab2:
-        st.subheader("ประวัติการใช้งานระบบ")
+        c_head, c_btn = st.columns([5, 1])
+        with c_head:
+            st.subheader("ประวัติการใช้งานระบบ")
+        with c_btn:
+             # CLEAR LOGS BUTTON
+            if st.button("🗑️ ล้างประวัติ (Clear)", type="secondary", use_container_width=True):
+                clear_logs()
+                # Create a new log entry immediately after clearing
+                log_action(st.session_state.username, "Clear Logs", "Admin cleared all audit logs")
+                st.success("ล้างประวัติเรียบร้อย!")
+                st.rerun()
+
         df_logs = get_logs()
         
         if not df_logs.empty:
