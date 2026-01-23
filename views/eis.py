@@ -25,24 +25,32 @@ def show_view():
         df['MonthNum'] = df['Month'].map(thai_month_map).fillna(0).astype(int)
         df['SortKey'] = (df['YearNum'] * 100) + df['MonthNum']
 
-    available_years = sorted(df['Year'].unique(), reverse=True)
-    if not available_years: available_years = ["2568"]
+    # --- FILTER SETUP (UPDATED: 2566-2568) ---
+    # We enforce these years to be available in the filter
+    target_years = ["2568", "2567", "2566"]
+    
+    # Combine with actual data years to ensure nothing is missed, but prioritize the target range
+    actual_years = list(df['Year'].unique())
+    available_years = sorted(list(set(target_years + actual_years)), reverse=True)
+    
     months_list = list(thai_month_map.keys())
 
-    # --- FILTER UI (Always Visible) ---
+    # --- FILTER UI ---
     st.markdown("##### 🔎 ตัวเลือกการกรอง (Filter)")
     c1, c2, c3, c4, c5 = st.columns([1,1,1,1,1])
+    
+    # Default: Start Jan 2566 to End Dec 2568 (or current max)
     with c1: m_start = st.selectbox("เดือนเริ่มต้น", months_list, index=0)
-    with c2: y_start = st.selectbox("ปีเริ่มต้น", available_years, index=0)
+    with c2: y_start = st.selectbox("ปีเริ่มต้น", available_years, index=len(available_years)-1) # Default to oldest (2566)
     with c3: m_end = st.selectbox("ถึงเดือน", months_list, index=11)
-    with c4: y_end = st.selectbox("ถึงปี", available_years, index=0)
+    with c4: y_end = st.selectbox("ถึงปี", available_years, index=0) # Default to newest (2568)
     with c5: 
         st.write("") 
         st.write("") 
         if st.button("🔍 กรองข้อมูล", use_container_width=True):
             st.rerun()
 
-    # Apply Filter
+    # Apply Filter Logic
     start_key = (int(y_start) * 100) + thai_month_map[m_start]
     end_key = (int(y_end) * 100) + thai_month_map[m_end]
     
@@ -57,7 +65,7 @@ def show_view():
     def get_main_sum(cat, item):
         return df_filtered[(df_filtered['Category'] == cat) & (df_filtered['Item'] == item)]['Value'].sum()
 
-    # Get latest total count (Snapshot)
+    # Get latest total count (Snapshot of the latest available month in selection)
     latest_row_key = df_filtered['SortKey'].max()
     df_snap = df_filtered[df_filtered['SortKey'] == latest_row_key]
     
@@ -77,13 +85,16 @@ def show_view():
     cpk_ex = {}
     cps_ex = {}
     
+    # Filter Extra Data using the SAME date range
     if 'df_eis_extra' in st.session_state and not st.session_state['df_eis_extra'].empty:
         df_ex = st.session_state['df_eis_extra'].copy()
         
-        # Prepare Filter
+        # Prepare Filter Columns
         df_ex['YearNum'] = pd.to_numeric(df_ex['Year'], errors='coerce').fillna(0).astype(int)
         df_ex['MonthNum'] = df_ex['Month'].map(thai_month_map).fillna(0).astype(int)
         df_ex['SortKey'] = (df_ex['YearNum'] * 100) + df_ex['MonthNum']
+        
+        # Apply Mask
         mask_ex = (df_ex['SortKey'] >= start_key) & (df_ex['SortKey'] <= end_key)
         df_ex_filtered = df_ex[mask_ex]
 
@@ -171,7 +182,6 @@ def show_view():
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("###### 📉 สมาชิกเพิ่ม ช.พ.ค.")
-        # Mocking sub-categories for bar chart since we only have total new
         val_total = int(cpk_new)
         val_reg = int(val_total * 0.8)
         val_rejoin = val_total - val_reg
