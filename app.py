@@ -5,16 +5,16 @@ import datetime
 import time
 import pandas as pd
 import io
-import json # <--- ADD THIS
+import json
 from utils.styles import load_css
 from utils.data_loader import save_and_load_excel, load_from_disk
 from utils import auth
 from utils import email_service
-from utils.logger import log_action # <--- ADD THIS
+from utils.logger import log_action
 import extra_streamlit_components as stx
 
 # Import Views
-from views import eis, admin, user_management, audit, legal, hospital, strategy, finance, treasury, welfare, dorm, procurement, api_management, admin_system # <--- ADD THIS
+from views import eis, admin, user_management, audit, legal, hospital, strategy, finance, treasury, welfare, dorm, procurement, api_management, admin_system
 
 # 1. CONFIGURATION
 st.set_page_config(page_title="ระบบศูนย์ข้อมูลกลาง สกสค.", layout="wide", page_icon="🏛️")
@@ -34,7 +34,6 @@ def show_global_announcement():
                     else: st.info(f"📢 {data['message']}")
         except: pass
 
-# ... (SESSION STATE CODE REMAINS THE SAME) ...
 # 2. SESSION STATE
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -47,7 +46,6 @@ if "temp_user_data" not in st.session_state: st.session_state.temp_user_data = {
 if "otp_secret" not in st.session_state: st.session_state.otp_secret = ""
 if "current_view" not in st.session_state: st.session_state.current_view = "สำนัก ช.พ.ค. - ช.พ.ส"
 
-# ... (AUTO LOGIN CODE REMAINS THE SAME) ...
 # --- AUTO LOGIN ---
 if not st.session_state.logged_in:
     try:
@@ -70,7 +68,8 @@ if not st.session_state.logged_in:
         print(f"Cookie read error: {e}")
 
 # 3. ADMIN VIEWS
-# 3.1 UPLOAD VIEW (Updated with Logging)
+# ---------------------------------------------------------
+# 3.1 UPLOAD VIEW
 def show_upload_view():
     st.markdown("## 📂 อัปโหลดข้อมูล (Upload Data)")
     st.info("กรุณาอัปโหลดไฟล์ Excel (.xlsx) เพื่ออัปเดตข้อมูลในระบบ")
@@ -87,43 +86,43 @@ def show_upload_view():
                     st.session_state.last_loaded_file = uploaded_file.name
                     st.session_state['data_loaded'] = True
                     
-                    # LOG UPLOAD
                     log_action(st.session_state.username, "Upload Data", f"File: {uploaded_file.name}")
                     
                     st.success("✅ บันทึกข้อมูลเรียบร้อยแล้ว!")
                     time.sleep(1.5)
                     st.rerun()
     
-    # ... (Rest of Upload View remains same) ...
     if st.session_state.get('data_loaded', False):
         st.success(f"สถานะข้อมูล: ✅ พร้อมใช้งาน (Source: {st.session_state.get('last_loaded_file', 'Saved File')})")
     else:
         st.warning("สถานะข้อมูล: ⚠️ ยังไม่มีข้อมูลในระบบ")
 
     st.write("---")
+    
     st.markdown("### 🔄 แก้ไขปัญหา (Troubleshooting)")
     st.caption("หากข้อมูลกราฟไม่ขึ้น หรือแสดง Error ว่า Missing Column ให้กดปุ่มนี้เพื่อบังคับโหลดข้อมูลใหม่")
     
     if st.button("🔄 บังคับโหลดข้อมูลใหม่ (Force Refresh)", type="primary"):
         with st.spinner("กำลังล้างค่าและโหลดข้อมูลใหม่..."):
             st.cache_data.clear()
-            keys_to_clear = ['df_eis', 'df_eis_extra', 'df_procure', 'df_strategy', 'df_finance', 'df_treasury', 'df_welfare', 'df_dorm', 'df_hospital', 'df_legal', 'df_audit', 'df_admin', 'data_loaded']
+            keys_to_clear = [
+                'df_eis', 'df_eis_extra', 'df_procure', 'df_strategy', 
+                'df_finance', 'df_treasury', 'df_welfare', 'df_dorm',
+                'df_hospital', 'df_legal', 'df_audit', 'df_admin', 'data_loaded'
+            ]
             for k in keys_to_clear:
-                if k in st.session_state: del st.session_state[k]
+                if k in st.session_state:
+                    del st.session_state[k]
 
             if load_from_disk():
                 st.session_state['data_loaded'] = True
-                
-                # LOG REFRESH
                 log_action(st.session_state.username, "Force Refresh", "Cleared Cache")
-                
-                st.success("✅ โหลดข้อมูลใหม่สำเร็จ!")
+                st.success("✅ โหลดข้อมูลใหม่สำเร็จ! (Refreshed Successfully)")
                 time.sleep(1)
                 st.rerun()
             else:
-                st.error("❌ ไม่พบไฟล์ข้อมูลในระบบ")
+                st.error("❌ ไม่พบไฟล์ข้อมูลในระบบ (File not found)")
 
-# ... (DOWNLOAD VIEW REMAINS SAME) ...
 # 3.2 DOWNLOAD VIEW
 def show_download_view():
     st.markdown("## 📥 ดาวน์โหลดข้อมูล (Download Data)")
@@ -149,28 +148,33 @@ def show_download_view():
 
     if session_key in st.session_state and isinstance(st.session_state[session_key], pd.DataFrame) and not st.session_state[session_key].empty:
         df = st.session_state[session_key]
+        
         st.write(f"**ตัวอย่างข้อมูล ({len(df)} แถว):**")
         st.dataframe(df.head(5), use_container_width=True)
+        
         col1, col2 = st.columns(2)
+        
         with col1:
             csv = df.to_csv(index=False).encode('utf-8-sig')
             if st.download_button("📄 ดาวน์โหลดเป็น CSV", csv, f"{session_key}.csv", "text/csv", use_container_width=True):
                  log_action(st.session_state.username, "Download CSV", session_key)
+        
         with col2:
             try:
                 buffer = io.BytesIO()
+                # Try xlsxwriter first, allow fallback if needed
                 with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
                     df.to_excel(writer, index=False, sheet_name='Sheet1')
+                
                 if st.download_button("📊 ดาวน์โหลดเป็น Excel", buffer, f"{session_key}.xlsx", "application/vnd.ms-excel", use_container_width=True):
                     log_action(st.session_state.username, "Download Excel", session_key)
             except Exception as e:
-                 st.error(f"Excel Error: {e} (Try installing xlsxwriter)")
+                st.error(f"Excel Error: {e} (Try installing xlsxwriter)")
     else:
         st.warning(f"⚠️ ไม่พบข้อมูลสำหรับชุดข้อมูลนี้ ({session_key}) กรุณาอัปโหลดไฟล์ก่อน")
 
-# 4. LOGIN PAGE (Updated with Logging)
+# 4. LOGIN PAGE
 def login_page():
-    # ... (Logo Code Remains Same) ...
     st.markdown("<br><br>", unsafe_allow_html=True)
     LOGO_FILENAME = "image_11b1c9.jpg"
     logo_path = "assets/" + LOGO_FILENAME
@@ -212,7 +216,7 @@ def login_page():
                         st.rerun()
                 else: 
                     st.error("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-                    log_action(user, "Login Failed", "Bad Credentials") # LOG FAILED LOGIN
+                    log_action(user, "Login Failed", "Bad Credentials")
 
         elif st.session_state.login_stage == "otp":
             st.warning(f"🔑 **TEST CODE:** {st.session_state.otp_secret}")
@@ -232,7 +236,6 @@ def login_page():
                         st.session_state.username = user_data["name"]
                         st.session_state.allowed_views = user_data.get("allowed_views", [])
                         
-                        # LOG SUCCESS LOGIN
                         log_action(user_data["name"], "Login Success", "Via OTP")
                         
                         if user_data.get('remember'):
@@ -242,99 +245,6 @@ def login_page():
                         st.session_state.otp_secret = ""
                         st.rerun()
                     else: st.error("❌ รหัส OTP ไม่ถูกต้อง")
-
-# 5. MAIN ROUTER & SIDEBAR
-if not st.session_state.logged_in:
-    login_page()
-else:
-    # --- SHOW ANNOUNCEMENT ---
-    show_global_announcement()
-
-    st.sidebar.title(f"👤 {st.session_state.username}")
-    st.sidebar.caption(f"Role: {st.session_state.role}")
-    st.sidebar.divider()
-
-    # --- DEFINE MENUS ---
-    dashboard_map = {
-        "สำนัก ช.พ.ค. - ช.พ.ส": eis.show_view,
-        "สำนักการคลัง - กลุ่มการเงิน": treasury.show_view,
-        "สำนักการคลัง - กลุ่มการพัสดุและอาคารสถานที่": procurement.show_view,
-        "สำนักการคลัง - กลุ่มบัญชี": finance.show_view,
-        "สำนักนโยบาย และยุทธศาสตร์": strategy.show_view,
-        "โรงพยาบาลครู": hospital.show_view,
-        "สำนักสวัสดิการ": welfare.show_view,
-        "หอพัก สกสค.": dorm.show_view,
-        "สำนักอำนวยการ": admin.show_view,
-        "หน่วยตรวจสอบภายใน": audit.show_view,
-        "สำนักนิติการ": legal.show_view,
-    }
-
-    available_dashboards = {}
-    if st.session_state.role in ["Admin", "Superuser"]:
-        available_dashboards = dashboard_map
-    else:
-        for name, func in dashboard_map.items():
-            if name in st.session_state.allowed_views:
-                available_dashboards[name] = func
-
-    admin_map = {
-        "⚙️ จัดการผู้ใช้งาน (Users)": user_management.show_view,
-        "🛠️ ตั้งค่าระบบ (System)": admin_system.show_view, # <--- NEW MENU
-        "🔌 จัดการ API (API Keys)": api_management.show_view,
-        "📂 อัปโหลดข้อมูล (Upload)": show_upload_view,
-        "📥 ดาวน์โหลดข้อมูล (Download)": show_download_view
-    }
-
-    # --- RENDER SIDEBAR ---
-    st.sidebar.markdown("### 📊 เมนู Dashboard")
-    for name in available_dashboards.keys():
-        if st.sidebar.button(name, use_container_width=True, type="primary" if st.session_state.current_view == name else "secondary"):
-            st.session_state.current_view = name
-            st.rerun()
-
-    if st.session_state.role == "Admin":
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("### ⚙️ เมนูการจัดการ")
-        for name in admin_map.keys():
-            if st.sidebar.button(name, use_container_width=True, type="primary" if st.session_state.current_view == name else "secondary"):
-                st.session_state.current_view = name
-                st.rerun()
-        
-        st.sidebar.markdown("---")
-        if st.sidebar.button("🚪 ออกจากระบบ (Log off)", use_container_width=True, type="secondary"):
-            log_action(st.session_state.username, "Logout", "User Initiated") # LOG LOGOUT
-            st.session_state.logged_in = False
-            st.session_state.role = None
-            st.session_state.allowed_views = []
-            st.session_state.login_stage = "credentials" 
-            try: cookie_manager.delete("user_session")
-            except: pass
-            time.sleep(0.1) 
-            st.rerun()
-
-    elif st.sidebar.button("🚪 ออกจากระบบ (Log off)", use_container_width=True):
-        log_action(st.session_state.username, "Logout", "User Initiated") # LOG LOGOUT
-        st.session_state.logged_in = False
-        st.session_state.role = None
-        st.session_state.allowed_views = []
-        st.session_state.login_stage = "credentials"
-        try: cookie_manager.delete("user_session")
-        except: pass
-        time.sleep(0.1) 
-        st.rerun()
-
-    # --- RENDER MAIN CONTENT ---
-    if 'df_eis' not in st.session_state: load_from_disk()
-
-    if st.session_state.current_view in available_dashboards:
-        available_dashboards[st.session_state.current_view]()
-    elif st.session_state.current_view in admin_map and st.session_state.role == "Admin":
-        admin_map[st.session_state.current_view]()
-    else:
-        if available_dashboards:
-            st.session_state.current_view = list(available_dashboards.keys())[0]
-            st.rerun()
-# ... (Previous code in app.py remains the same until the MAIN ROUTER section) ...
 
 # 5. MAIN ROUTER & SIDEBAR
 if not st.session_state.logged_in:
@@ -420,7 +330,7 @@ else:
     if 'df_eis' not in st.session_state: load_from_disk()
 
     # --- ANALYTICS TRACKING ---
-    # Log only when the view changes to avoid spamming logs
+    # Log only when the view changes
     if 'last_view_logged' not in st.session_state:
         st.session_state.last_view_logged = None
 
@@ -437,4 +347,3 @@ else:
         if available_dashboards:
             st.session_state.current_view = list(available_dashboards.keys())[0]
             st.rerun()
-
