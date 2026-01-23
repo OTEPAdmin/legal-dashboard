@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from utils.styles import render_header
 
 def show_view():
-    render_header("💰 ภาพรวมฐานะการเงิน (Financial Overview)", border_color="#9C27B0")
+    render_header("สำนักการคลัง - กลุ่มบัญชี", border_color="#9C27B0")
     
     if 'df_finance' not in st.session_state or st.session_state['df_finance'].empty:
         st.error("⚠️ ไม่พบข้อมูล Finance_Data ใน Excel")
