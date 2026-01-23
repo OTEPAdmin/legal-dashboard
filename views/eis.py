@@ -2,28 +2,50 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
-import random # For trend simulation
 from utils.styles import render_header
 
 def show_view():
     render_header("สำนัก ช.พ.ค. - ช.พ.ส", border_color="#00BCD4")
     
+    # --- SAFETY CHECK 1: Main Data ---
     if 'df_eis' not in st.session_state or st.session_state['df_eis'].empty:
-        st.error("⚠️ ไม่พบข้อมูล EIS_Data ใน Excel")
+        st.error("❌ Error: ไม่พบข้อมูล 'EIS_Data' ใน Excel")
+        st.info("💡 คำแนะนำ: กรุณาตรวจสอบว่าไฟล์ Excel มี Tab ชื่อ 'EIS_Data' หรือไม่")
         return
+
+    # --- SAFETY CHECK 2: Extra Data (Financials/Death) ---
+    # We don't stop execution, but we warn if missing
+    has_extra_data = False
+    if 'df_eis_extra' in st.session_state and not st.session_state['df_eis_extra'].empty:
+        has_extra_data = True
+    else:
+        st.warning("⚠️ Warning: ไม่พบข้อมูล 'EIS_Extra' (กราฟสาเหตุการเสียชีวิต/การเงิน จะไม่แสดง)")
+        st.caption("💡 คำแนะนำ: ตรวจสอบว่าไฟล์ Excel มี Tab ชื่อ 'EIS_Extra' และอัปเดตไฟล์ utils/data_loader.py แล้ว")
 
     # --- 1. PREPARE MAIN DATA (MEMBERS) ---
     df = st.session_state['df_eis'].copy()
+
+    # Verify Columns
+    required_cols = ['Year', 'Month', 'Category', 'Item', 'Value']
+    missing_cols = [c for c in required_cols if c not in df.columns]
+    if missing_cols:
+        st.error(f"❌ Error: ข้อมูลใน Tab 'EIS_Data' ไม่ถูกต้อง (ขาดคอลัมน์: {missing_cols})")
+        return
 
     thai_month_map = {
         "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4, "พฤษภาคม": 5, "มิถุนายน": 6,
         "กรกฎาคม": 7, "สิงหาคม": 8, "กันยายน": 9, "ตุลาคม": 10, "พฤศจิกายน": 11, "ธันวาคม": 12
     }
     
-    if 'SortKey' not in df.columns:
-        df['YearNum'] = pd.to_numeric(df['Year'], errors='coerce').fillna(0).astype(int)
-        df['MonthNum'] = df['Month'].map(thai_month_map).fillna(0).astype(int)
-        df['SortKey'] = (df['YearNum'] * 100) + df['MonthNum']
+    # Generate SortKey safely
+    try:
+        if 'SortKey' not in df.columns:
+            df['YearNum'] = pd.to_numeric(df['Year'], errors='coerce').fillna(0).astype(int)
+            df['MonthNum'] = df['Month'].map(thai_month_map).fillna(0).astype(int)
+            df['SortKey'] = (df['YearNum'] * 100) + df['MonthNum']
+    except Exception as e:
+        st.error(f"❌ Error Processing Dates: {e}")
+        return
 
     # --- FILTER SETUP ---
     target_years = ["2568", "2567", "2566"]
@@ -46,10 +68,14 @@ def show_view():
             st.rerun()
 
     # Apply Filter
-    start_key = (int(y_start) * 100) + thai_month_map[m_start]
-    end_key = (int(y_end) * 100) + thai_month_map[m_end]
-    mask = (df['SortKey'] >= start_key) & (df['SortKey'] <= end_key)
-    df_filtered = df[mask]
+    try:
+        start_key = (int(y_start) * 100) + thai_month_map[m_start]
+        end_key = (int(y_end) * 100) + thai_month_map[m_end]
+        mask = (df['SortKey'] >= start_key) & (df['SortKey'] <= end_key)
+        df_filtered = df[mask]
+    except:
+        st.error("❌ Error applying filter")
+        return
     
     if df_filtered.empty:
         st.warning(f"ไม่พบข้อมูลในช่วงเวลา: {m_start} {y_start} - {m_end} {y_end}")
@@ -57,14 +83,17 @@ def show_view():
 
     # --- CALCULATION LOGIC ---
     def get_sum(cat, item):
-        return df_filtered[(df_filtered['Category'] == cat) & (df_filtered['Item'] == item)]['Value'].sum()
+        val = df_filtered[(df_filtered['Category'] == cat) & (df_filtered['Item'] == item)]['Value'].sum()
+        return val if pd.notna(val) else 0
 
     latest_key = df_filtered['SortKey'].max()
     df_snap = df_filtered[df_filtered['SortKey'] == latest_key]
     
     def get_snap(cat, item):
-        return df_snap[(df_snap['Category'] == cat) & (df_snap['Item'] == item)]['Value'].sum()
+        val = df_snap[(df_snap['Category'] == cat) & (df_snap['Item'] == item)]['Value'].sum()
+        return val if pd.notna(val) else 0
 
+    # Main Numbers (Safely handled)
     cpk_total = get_snap('CPK', 'Members_Total')
     cps_total = get_snap('CPS', 'Members_Total')
     
@@ -174,7 +203,7 @@ def show_view():
     st.write("---")
 
     # =================================================================================================
-    # SECTION 2: MEMBER DEMOGRAPHICS
+    # SECTION 2: DEMOGRAPHICS
     # =================================================================================================
     st.markdown("#### 👥 ข้อมูลสมาชิก | DEMOGRAPHIC")
     
@@ -205,35 +234,38 @@ def show_view():
     st.write("---")
 
     # =================================================================================================
-    # SECTION 3: CAUSES OF DEATH
+    # SECTION 3 & 4 (REQUIRE EXTRA DATA)
     # =================================================================================================
-    st.markdown("#### ☠️ สาเหตุการเสียชีวิต | CAUSES OF DEATH")
-
+    
+    # Initialize Defaults
     cpk_death_data = {}
     cps_death_data = {}
-    
-    # Financial data preparation for next section
     cpk_remit_total = 0
     cps_remit_total = 0
-    
-    if 'df_eis_extra' in st.session_state and not st.session_state['df_eis_extra'].empty:
-        df_ex = st.session_state['df_eis_extra'].copy()
-        df_ex['YearNum'] = pd.to_numeric(df_ex['Year'], errors='coerce').fillna(0).astype(int)
-        df_ex['MonthNum'] = df_ex['Month'].map(thai_month_map).fillna(0).astype(int)
-        df_ex['SortKey'] = (df_ex['YearNum'] * 100) + df_ex['MonthNum']
-        df_ex_filtered = df_ex[(df_ex['SortKey'] >= start_key) & (df_ex['SortKey'] <= end_key)]
 
-        # Death Data
-        death_mapping = [('โรคมะเร็ง', 'โรคมะเร็ง'), ('โรคปอด', 'โรคปอด'), ('โรคหัวใจ/หลอดเลือด', 'โรคหัวใจ'), ('ชราภาพ', 'โรคชรา'), ('ติดเชื้อในกระแสเลือด', 'โรคสมอง')]
-        for db_key, label in death_mapping:
-            val = df_ex_filtered[(df_ex_filtered['Category'] == 'Death_Cause') & (df_ex_filtered['Item'] == db_key)]['Value'].sum()
-            cpk_death_data[label] = int(val * 0.55)
-            cps_death_data[label] = int(val * 0.45)
-            
-        # Financial Data
-        cpk_remit_total = df_ex_filtered[(df_ex_filtered['Category'] == 'Remittance') & (df_ex_filtered['Item'] == 'เงินนำส่ง ช.พ.ค.')]['Value'].sum() * 1000000 # Convert M to unit if needed (Mocking scale)
-        cps_remit_total = df_ex_filtered[(df_ex_filtered['Category'] == 'Remittance') & (df_ex_filtered['Item'] == 'เงินนำส่ง ช.พ.ส.')]['Value'].sum() * 1000000
+    if has_extra_data:
+        try:
+            df_ex = st.session_state['df_eis_extra'].copy()
+            df_ex['YearNum'] = pd.to_numeric(df_ex['Year'], errors='coerce').fillna(0).astype(int)
+            df_ex['MonthNum'] = df_ex['Month'].map(thai_month_map).fillna(0).astype(int)
+            df_ex['SortKey'] = (df_ex['YearNum'] * 100) + df_ex['MonthNum']
+            df_ex_filtered = df_ex[(df_ex['SortKey'] >= start_key) & (df_ex['SortKey'] <= end_key)]
 
+            # Death Data
+            death_mapping = [('โรคมะเร็ง', 'โรคมะเร็ง'), ('โรคปอด', 'โรคปอด'), ('โรคหัวใจ/หลอดเลือด', 'โรคหัวใจ'), ('ชราภาพ', 'โรคชรา'), ('ติดเชื้อในกระแสเลือด', 'โรคสมอง')]
+            for db_key, label in death_mapping:
+                val = df_ex_filtered[(df_ex_filtered['Category'] == 'Death_Cause') & (df_ex_filtered['Item'] == db_key)]['Value'].sum()
+                cpk_death_data[label] = int(val * 0.55)
+                cps_death_data[label] = int(val * 0.45)
+                
+            # Financial Data
+            cpk_remit_total = df_ex_filtered[(df_ex_filtered['Category'] == 'Remittance') & (df_ex_filtered['Item'] == 'เงินนำส่ง ช.พ.ค.')]['Value'].sum() * 1000000 
+            cps_remit_total = df_ex_filtered[(df_ex_filtered['Category'] == 'Remittance') & (df_ex_filtered['Item'] == 'เงินนำส่ง ช.พ.ส.')]['Value'].sum() * 1000000
+        except Exception as e:
+            st.error(f"❌ Error Processing Extra Data: {e}")
+
+    # SECTION 3: DEATH
+    st.markdown("#### ☠️ สาเหตุการเสียชีวิต | CAUSES OF DEATH")
     col_death1, col_death2 = st.columns(2)
     death_colors = ['#FF7043', '#29B6F6', '#AB47BC', '#FFCA28', '#66BB6A'] 
     death_labels = ['โรคมะเร็ง', 'โรคปอด', 'โรคหัวใจ', 'โรคชรา', 'โรคสมอง']
@@ -249,14 +281,11 @@ def show_view():
 
     st.write("---")
 
-    # =================================================================================================
-    # SECTION 4: FINANCIAL & REMITTANCE (การนำส่งเงิน & งบการเงิน)
-    # =================================================================================================
+    # SECTION 4: FINANCIALS
     st.markdown("#### 💸 การนำส่งเงิน & งบการเงิน | FINANCIAL & REMITTANCE")
-
+    import random
     c_fin1, c_fin2 = st.columns(2)
 
-    # Helper for the 3-colored Card
     def render_fin_group(title, dead_count, per_body, total_fam, bg_color):
         st.markdown(f"""
         <div style="background-color:{bg_color}; padding:15px; border-radius:10px; font-family: 'Kanit', sans-serif; margin-bottom: 10px;">
@@ -278,9 +307,8 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # Helper for Status Row
     def render_status_row(paid_pct, pending_pct, rank):
-        paid_count = int(paid_pct * 15000) # Mock scale
+        paid_count = int(paid_pct * 15000)
         pending_count = int(pending_pct * 15000)
         st.markdown(f"""
         <div style="background:white; border:1px solid #eee; padding:15px; border-radius:10px; font-family: 'Kanit', sans-serif; display:flex; justify-content:space-between; text-align:center;">
@@ -302,9 +330,7 @@ def show_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # Helper for Line Chart
     def create_trend_chart(color_hex, title):
-        # Generate mock trend data based on selected range
         dates = pd.date_range(start=f"2024-{thai_month_map[m_start]:02d}-01", periods=10, freq='M')
         months_label = [f"งวด {i+1}" for i in range(len(dates))]
         values = [random.uniform(88, 95) for _ in range(len(dates))]
@@ -319,30 +345,18 @@ def show_view():
         )
         return fig
 
-    # --- LEFT COLUMN: CPK ---
     with c_fin1:
-        # 1. Cards
         cpk_deceased = int(cpk_dead_val)
-        cpk_per_body = 200000 # Mock Rate
-        cpk_family = max(0, cpk_remit_total - (cpk_deceased * cpk_per_body)) # Logic: Remit - Funeral = Family
+        cpk_per_body = 200000 
+        cpk_family = max(0, cpk_remit_total - (cpk_deceased * cpk_per_body)) 
         render_fin_group("เงินสงเคราะห์ ช.พ.ค.", cpk_deceased, cpk_per_body, cpk_family, "#E0F7FA")
-        
-        # 2. Status
         render_status_row(90.64, 9.36, 66)
-        
-        # 3. Chart
         st.plotly_chart(create_trend_chart("#00BCD4", "📈 แนวโน้มอัตราการชำระ ช.พ.ค."), use_container_width=True)
 
-    # --- RIGHT COLUMN: CPS ---
     with c_fin2:
-        # 1. Cards
         cps_deceased = int(cps_dead_val)
-        cps_per_body = 180000 # Mock Rate
+        cps_per_body = 180000
         cps_family = max(0, cps_remit_total - (cps_deceased * cps_per_body))
         render_fin_group("เงินสงเคราะห์ ช.พ.ส.", cps_deceased, cps_per_body, cps_family, "#F3E5F5")
-        
-        # 2. Status
         render_status_row(91.25, 8.75, 71)
-        
-        # 3. Chart
         st.plotly_chart(create_trend_chart("#AB47BC", "📈 แนวโน้มอัตราการชำระ ช.พ.ส."), use_container_width=True)
