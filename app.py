@@ -330,7 +330,6 @@ else:
     if 'df_eis' not in st.session_state: load_from_disk()
 
     # --- ANALYTICS TRACKING ---
-    # Log only when the view changes
     if 'last_view_logged' not in st.session_state:
         st.session_state.last_view_logged = None
 
