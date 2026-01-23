@@ -28,3 +28,8 @@ def get_logs():
         df = pd.read_csv(LOG_FILE)
         return df.sort_values("Timestamp", ascending=False)
     return pd.DataFrame(columns=["Timestamp", "User", "Action", "Details"])
+
+def clear_logs():
+    """Clears all logs by removing the file."""
+    if os.path.exists(LOG_FILE):
+        os.remove(LOG_FILE)
