@@ -46,9 +46,41 @@ if "temp_user_data" not in st.session_state: st.session_state.temp_user_data = {
 if "otp_secret" not in st.session_state: st.session_state.otp_secret = ""
 if "current_view" not in st.session_state: st.session_state.current_view = "สำนัก ช.พ.ค. - ช.พ.ส"
 
-# --- AUTO LOGIN ---
+# --- INACTIVITY CHECK (5 Minute Timeout) ---
+if "last_activity" not in st.session_state:
+    st.session_state.last_activity = time.time()
+
+def check_inactivity():
+    if st.session_state.logged_in:
+        current_time = time.time()
+        elapsed = current_time - st.session_state.last_activity
+        
+        # 5 Minutes = 300 Seconds
+        if elapsed > 300:
+            st.warning("⚠️ หมดเวลาการใช้งาน (Session Timeout due to inactivity)")
+            time.sleep(2)
+            logout_user(reason="Session Timeout")
+        else:
+            # Update timer on interaction
+            st.session_state.last_activity = current_time
+
+def logout_user(reason="User Initiated"):
+    log_action(st.session_state.username, "Logout", reason)
+    st.session_state.logged_in = False
+    st.session_state.role = None
+    st.session_state.allowed_views = []
+    st.session_state.login_stage = "credentials"
+    try: cookie_manager.delete("user_session")
+    except: pass
+    st.rerun()
+
+# Run inactivity check on every rerun
+check_inactivity()
+
+# --- AUTO LOGIN (Handles Refresh) ---
 if not st.session_state.logged_in:
     try:
+        # Check for existing cookie
         cookie_user = cookie_manager.get(cookie="user_session")
         if cookie_user:
             users = auth.load_users()
@@ -59,16 +91,16 @@ if not st.session_state.logged_in:
                 st.session_state.username = user_data["name"]
                 st.session_state.allowed_views = user_data.get("allowed_views", [])
                 
-                # LOG AUTO LOGIN
-                log_action(user_data["name"], "Auto Login", "Via Cookie") 
+                # Reset inactivity timer on auto-login (refresh)
+                st.session_state.last_activity = time.time()
                 
+                log_action(user_data["name"], "Auto Login", "Via Cookie (Refresh)") 
                 time.sleep(0.1)
                 st.rerun()
     except Exception as e:
         print(f"Cookie read error: {e}")
 
 # 3. ADMIN VIEWS
-# ---------------------------------------------------------
 # 3.1 UPLOAD VIEW
 def show_upload_view():
     st.markdown("## 📂 อัปโหลดข้อมูล (Upload Data)")
@@ -85,9 +117,7 @@ def show_upload_view():
                 if save_and_load_excel(uploaded_file):
                     st.session_state.last_loaded_file = uploaded_file.name
                     st.session_state['data_loaded'] = True
-                    
                     log_action(st.session_state.username, "Upload Data", f"File: {uploaded_file.name}")
-                    
                     st.success("✅ บันทึกข้อมูลเรียบร้อยแล้ว!")
                     time.sleep(1.5)
                     st.rerun()
@@ -98,7 +128,6 @@ def show_upload_view():
         st.warning("สถานะข้อมูล: ⚠️ ยังไม่มีข้อมูลในระบบ")
 
     st.write("---")
-    
     st.markdown("### 🔄 แก้ไขปัญหา (Troubleshooting)")
     st.caption("หากข้อมูลกราฟไม่ขึ้น หรือแสดง Error ว่า Missing Column ให้กดปุ่มนี้เพื่อบังคับโหลดข้อมูลใหม่")
     
@@ -111,17 +140,16 @@ def show_upload_view():
                 'df_hospital', 'df_legal', 'df_audit', 'df_admin', 'data_loaded'
             ]
             for k in keys_to_clear:
-                if k in st.session_state:
-                    del st.session_state[k]
+                if k in st.session_state: del st.session_state[k]
 
             if load_from_disk():
                 st.session_state['data_loaded'] = True
                 log_action(st.session_state.username, "Force Refresh", "Cleared Cache")
-                st.success("✅ โหลดข้อมูลใหม่สำเร็จ! (Refreshed Successfully)")
+                st.success("✅ โหลดข้อมูลใหม่สำเร็จ!")
                 time.sleep(1)
                 st.rerun()
             else:
-                st.error("❌ ไม่พบไฟล์ข้อมูลในระบบ (File not found)")
+                st.error("❌ ไม่พบไฟล์ข้อมูลในระบบ")
 
 # 3.2 DOWNLOAD VIEW
 def show_download_view():
@@ -148,24 +176,18 @@ def show_download_view():
 
     if session_key in st.session_state and isinstance(st.session_state[session_key], pd.DataFrame) and not st.session_state[session_key].empty:
         df = st.session_state[session_key]
-        
         st.write(f"**ตัวอย่างข้อมูล ({len(df)} แถว):**")
         st.dataframe(df.head(5), use_container_width=True)
-        
         col1, col2 = st.columns(2)
-        
         with col1:
             csv = df.to_csv(index=False).encode('utf-8-sig')
             if st.download_button("📄 ดาวน์โหลดเป็น CSV", csv, f"{session_key}.csv", "text/csv", use_container_width=True):
                  log_action(st.session_state.username, "Download CSV", session_key)
-        
         with col2:
             try:
                 buffer = io.BytesIO()
-                # Try xlsxwriter first, allow fallback if needed
                 with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
                     df.to_excel(writer, index=False, sheet_name='Sheet1')
-                
                 if st.download_button("📊 ดาวน์โหลดเป็น Excel", buffer, f"{session_key}.xlsx", "application/vnd.ms-excel", use_container_width=True):
                     log_action(st.session_state.username, "Download Excel", session_key)
             except Exception as e:
@@ -236,11 +258,22 @@ def login_page():
                         st.session_state.username = user_data["name"]
                         st.session_state.allowed_views = user_data.get("allowed_views", [])
                         
-                        log_action(user_data["name"], "Login Success", "Via OTP")
+                        # --- KEY FIX FOR REFRESH LOGOUT ---
+                        # Always set a cookie, even if "Remember me" is NOT checked.
+                        # If "Remember me" is Checked: Expires in 10 days.
+                        # If "Remember me" is Unchecked: Expires in 1 hour (allows refresh to work).
+                        # The 5-minute inactivity timer will handle the security part.
                         
                         if user_data.get('remember'):
                             expires = datetime.datetime.now() + datetime.timedelta(days=10)
-                            cookie_manager.set("user_session", user_data['username'], expires_at=expires)
+                        else:
+                            expires = datetime.datetime.now() + datetime.timedelta(hours=1)
+                            
+                        cookie_manager.set("user_session", user_data['username'], expires_at=expires)
+                        # ----------------------------------
+
+                        log_action(user_data["name"], "Login Success", "Via OTP")
+                        
                         st.session_state.login_stage = "credentials"
                         st.session_state.otp_secret = ""
                         st.rerun()
@@ -250,14 +283,12 @@ def login_page():
 if not st.session_state.logged_in:
     login_page()
 else:
-    # --- SHOW ANNOUNCEMENT ---
     show_global_announcement()
 
     st.sidebar.title(f"👤 {st.session_state.username}")
     st.sidebar.caption(f"Role: {st.session_state.role}")
     st.sidebar.divider()
 
-    # --- DEFINE MENUS ---
     dashboard_map = {
         "สำนัก ช.พ.ค. - ช.พ.ส": eis.show_view,
         "สำนักการคลัง - กลุ่มการเงิน": treasury.show_view,
@@ -288,7 +319,6 @@ else:
         "📥 ดาวน์โหลดข้อมูล (Download)": show_download_view
     }
 
-    # --- RENDER SIDEBAR ---
     st.sidebar.markdown("### 📊 เมนู Dashboard")
     for name in available_dashboards.keys():
         if st.sidebar.button(name, use_container_width=True, type="primary" if st.session_state.current_view == name else "secondary"):
@@ -305,38 +335,18 @@ else:
         
         st.sidebar.markdown("---")
         if st.sidebar.button("🚪 ออกจากระบบ (Log off)", use_container_width=True, type="secondary"):
-            log_action(st.session_state.username, "Logout", "User Initiated")
-            st.session_state.logged_in = False
-            st.session_state.role = None
-            st.session_state.allowed_views = []
-            st.session_state.login_stage = "credentials" 
-            try: cookie_manager.delete("user_session")
-            except: pass
-            time.sleep(0.1) 
-            st.rerun()
+            logout_user()
 
     elif st.sidebar.button("🚪 ออกจากระบบ (Log off)", use_container_width=True):
-        log_action(st.session_state.username, "Logout", "User Initiated")
-        st.session_state.logged_in = False
-        st.session_state.role = None
-        st.session_state.allowed_views = []
-        st.session_state.login_stage = "credentials"
-        try: cookie_manager.delete("user_session")
-        except: pass
-        time.sleep(0.1) 
-        st.rerun()
+        logout_user()
 
-    # --- RENDER MAIN CONTENT ---
     if 'df_eis' not in st.session_state: load_from_disk()
 
     # --- ANALYTICS TRACKING ---
-    if 'last_view_logged' not in st.session_state:
-        st.session_state.last_view_logged = None
-
+    if 'last_view_logged' not in st.session_state: st.session_state.last_view_logged = None
     if st.session_state.current_view != st.session_state.last_view_logged:
         log_action(st.session_state.username, "View Dashboard", st.session_state.current_view)
         st.session_state.last_view_logged = st.session_state.current_view
-    # --------------------------
 
     if st.session_state.current_view in available_dashboards:
         available_dashboards[st.session_state.current_view]()
