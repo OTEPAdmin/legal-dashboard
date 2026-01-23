@@ -17,21 +17,23 @@ st.set_page_config(page_title="ระบบศูนย์ข้อมูลก�
 load_css()
 cookie_manager = stx.CookieManager()
 
-# 2. SESSION STATE
+# 2. SESSION STATE SETUP
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.role = None
     st.session_state.username = ""
     st.session_state.allowed_views = [] 
-    
-if "login_stage" not in st.session_state:
-    st.session_state.login_stage = "credentials" 
-if "temp_user_data" not in st.session_state:
-    st.session_state.temp_user_data = {}
-if "otp_secret" not in st.session_state:
-    st.session_state.otp_secret = ""
 
-# Auto-login
+# Login Flow States
+if "login_stage" not in st.session_state: st.session_state.login_stage = "credentials" 
+if "temp_user_data" not in st.session_state: st.session_state.temp_user_data = {}
+if "otp_secret" not in st.session_state: st.session_state.otp_secret = ""
+
+# Navigation State (Default View)
+if "current_view" not in st.session_state:
+    st.session_state.current_view = "บทสรุปผู้บริหาร"
+
+# --- AUTO LOGIN ---
 if not st.session_state.logged_in:
     try:
         cookie_user = cookie_manager.get(cookie="user_session")
@@ -48,7 +50,34 @@ if not st.session_state.logged_in:
     except Exception as e:
         print(f"Cookie read error: {e}")
 
-# 3. LOGIN PAGE LOGIC
+# 3. UPLOAD DATA VIEW (New function for main window)
+def show_upload_view():
+    st.markdown("## 📂 อัปโหลดข้อมูล (Upload Data)")
+    st.info("กรุณาอัปโหลดไฟล์ Excel (.xlsx) เพื่ออัปเดตข้อมูลในระบบ")
+    
+    # Load logic (Keep existing data logic)
+    if 'df_eis' not in st.session_state:
+        if load_from_disk(): st.session_state['data_loaded'] = True
+
+    # Main Window File Uploader
+    uploaded_file = st.file_uploader("ลากและวางไฟล์ที่นี่ (Drag and drop file here)", type=["xlsx"])
+    
+    if uploaded_file:
+        if 'last_loaded_file' not in st.session_state or st.session_state.last_loaded_file != uploaded_file.name:
+            with st.spinner("กำลังประมวลผลข้อมูล..."):
+                if save_and_load_excel(uploaded_file):
+                    st.session_state.last_loaded_file = uploaded_file.name
+                    st.session_state['data_loaded'] = True
+                    st.success("✅ บันทึกข้อมูลเรียบร้อยแล้ว! (Data Saved Successfully)")
+                    time.sleep(1.5)
+                    st.rerun()
+
+    if st.session_state.get('data_loaded', False):
+        st.success(f"สถานะข้อมูล: ✅ พร้อมใช้งาน (Source: {st.session_state.get('last_loaded_file', 'Saved File')})")
+    else:
+        st.warning("สถานะข้อมูล: ⚠️ ยังไม่มีข้อมูลในระบบ")
+
+# 4. LOGIN PAGE
 def login_page():
     st.markdown("<br><br>", unsafe_allow_html=True)
     LOGO_FILENAME = "image_11b1c9.jpg"
@@ -75,11 +104,9 @@ def login_page():
             
             if st.button("ถัดไป (Next)", use_container_width=True):
                 user_data = auth.check_credentials(user, pw)
-                
                 if user_data:
                     otp = email_service.generate_otp()
                     user_email = user_data.get('email', '')
-                    
                     if not user_email or "@" not in user_email:
                         st.error("❌ บัญชีนี้ยังไม่ได้ระบุอีเมล กรุณาติดต่อ Admin")
                     else:
@@ -91,8 +118,7 @@ def login_page():
                         st.session_state.login_stage = "otp"
                         time.sleep(5) 
                         st.rerun()
-                else:
-                    st.error("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+                else: st.error("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
 
         elif st.session_state.login_stage == "otp":
             st.warning(f"🔑 **TEST CODE:** {st.session_state.otp_secret}")
@@ -117,17 +143,20 @@ def login_page():
                         st.session_state.login_stage = "credentials"
                         st.session_state.otp_secret = ""
                         st.rerun()
-                    else:
-                        st.error("❌ รหัส OTP ไม่ถูกต้อง")
+                    else: st.error("❌ รหัส OTP ไม่ถูกต้อง")
 
-# 4. MAIN ROUTER
+# 5. MAIN ROUTER & SIDEBAR
 if not st.session_state.logged_in:
     login_page()
 else:
+    # --- SIDEBAR HEADER ---
     st.sidebar.title(f"👤 {st.session_state.username}")
     st.sidebar.caption(f"Role: {st.session_state.role}")
-    
-    all_dashboards = {
+    st.sidebar.divider()
+
+    # --- DEFINE MENUS ---
+    # 1. Dashboard List
+    dashboard_map = {
         "บทสรุปผู้บริหาร": eis.show_view,
         "สำนักการคลัง": treasury.show_view,
         "กองคลัง-พัสดุ": procurement.show_view,
@@ -141,54 +170,82 @@ else:
         "สำนักนิติการ": legal.show_view,
     }
 
-    menu_options = {}
-
+    # Filter Dashboards based on privilege
+    available_dashboards = {}
     if st.session_state.role in ["Admin", "Superuser"]:
-        menu_options = all_dashboards
+        available_dashboards = dashboard_map
     else:
-        for name, view_func in all_dashboards.items():
+        for name, func in dashboard_map.items():
             if name in st.session_state.allowed_views:
-                menu_options[name] = view_func
+                available_dashboards[name] = func
 
+    # 2. Admin Functions
+    admin_map = {
+        "⚙️ จัดการผู้ใช้งาน (Users)": user_management.show_view,
+        "🔌 จัดการ API (API Keys)": api_management.show_view,
+        "📂 อัปโหลดข้อมูล (Upload)": show_upload_view
+    }
+
+    # --- RENDER SIDEBAR ---
+    
+    # GROUP 1: DASHBOARDS
+    st.sidebar.markdown("### 📊 เมนู Dashboard")
+    
+    # We use buttons for navigation to avoid 'Radio' complexity with two groups
+    for name in available_dashboards.keys():
+        if st.sidebar.button(name, use_container_width=True, type="primary" if st.session_state.current_view == name else "secondary"):
+            st.session_state.current_view = name
+            st.rerun()
+
+    # GROUP 2: ADMINISTRATIVE (Only for Admin)
     if st.session_state.role == "Admin":
-        menu_options["⚙️ จัดการผู้ใช้งาน (Users)"] = user_management.show_view
-        menu_options["🔌 จัดการ API (API Keys)"] = api_management.show_view
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("### ⚙️ เมนูการจัดการ")
+        
+        for name in admin_map.keys():
+            if st.sidebar.button(name, use_container_width=True, type="primary" if st.session_state.current_view == name else "secondary"):
+                st.session_state.current_view = name
+                st.rerun()
 
-    if st.sidebar.button("🚪 ออกจากระบบ (Log off)"):
+        # Log off is part of the Admin Group visually
+        st.sidebar.markdown("---")
+        if st.sidebar.button("🚪 ออกจากระบบ (Log off)", use_container_width=True, type="secondary"):
+            st.session_state.logged_in = False
+            st.session_state.role = None
+            st.session_state.allowed_views = []
+            st.session_state.login_stage = "credentials" 
+            try: cookie_manager.delete("user_session")
+            except: pass
+            time.sleep(0.1) 
+            st.rerun()
+
+    # For Non-Admins, Log off is separate
+    elif st.sidebar.button("🚪 ออกจากระบบ (Log off)", use_container_width=True):
         st.session_state.logged_in = False
         st.session_state.role = None
         st.session_state.allowed_views = []
-        st.session_state.login_stage = "credentials" 
+        st.session_state.login_stage = "credentials"
         try: cookie_manager.delete("user_session")
         except: pass
         time.sleep(0.1) 
         st.rerun()
 
-    st.sidebar.divider()
+    # --- RENDER MAIN CONTENT ---
     
-    if st.session_state.role == "Admin":
-        st.sidebar.markdown("### 📂 Upload Data")
-        if 'df_eis' not in st.session_state:
-            if load_from_disk(): st.session_state['data_loaded'] = True
-        uploaded_file = st.sidebar.file_uploader("Choose Excel File", type=["xlsx"])
-        if uploaded_file:
-            if 'last_loaded_file' not in st.session_state or st.session_state.last_loaded_file != uploaded_file.name:
-                if save_and_load_excel(uploaded_file):
-                    st.session_state.last_loaded_file = uploaded_file.name
-                    st.session_state['data_loaded'] = True
-                    st.sidebar.success("✅ New Data Saved!")
-                    time.sleep(1)
-                    st.rerun()
-        if st.session_state.get('data_loaded', False): st.sidebar.info("✅ Data Source: Active")
-        else: st.sidebar.warning("⚠️ No data found. Please upload.")
-        st.sidebar.divider()
-    else:
-        if 'df_eis' not in st.session_state:
-            load_from_disk()
+    # Ensure data is loaded (Non-blocking check)
+    if 'df_eis' not in st.session_state: load_from_disk()
 
-    if menu_options:
-        selection = st.sidebar.radio("เลือกเมนู:", list(menu_options.keys()))
-        if selection in menu_options: menu_options[selection]()
+    # Routing Logic
+    if st.session_state.current_view in available_dashboards:
+        available_dashboards[st.session_state.current_view]()
+    elif st.session_state.current_view in admin_map and st.session_state.role == "Admin":
+        admin_map[st.session_state.current_view]()
     else:
-        st.sidebar.warning("🚫 No dashboards assigned.")
-        st.info("คุณไม่ได้รับสิทธิ์ในการเข้าถึงแดชบอร์ดใดๆ กรุณาติดต่อผู้ดูแลระบบ")
+        # Fallback if view not found
+        st.error(f"View '{st.session_state.current_view}' not found or access denied.")
+        # Reset to default
+        if available_dashboards:
+            first_view = list(available_dashboards.keys())[0]
+            if st.button(f"Go to {first_view}"):
+                st.session_state.current_view = first_view
+                st.rerun()
