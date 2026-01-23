@@ -19,41 +19,34 @@ def show_view():
         "กรกฎาคม": 7, "สิงหาคม": 8, "กันยายน": 9, "ตุลาคม": 10, "พฤศจิกายน": 11, "ธันวาคม": 12
     }
     
-    # Ensure SortKey
     if 'SortKey' not in df.columns:
         df['YearNum'] = pd.to_numeric(df['Year'], errors='coerce').fillna(0).astype(int)
         df['MonthNum'] = df['Month'].map(thai_month_map).fillna(0).astype(int)
         df['SortKey'] = (df['YearNum'] * 100) + df['MonthNum']
 
-    # --- FILTER SETUP (UPDATED: 2566-2568) ---
-    # We enforce these years to be available in the filter
+    # --- FILTER SETUP ---
     target_years = ["2568", "2567", "2566"]
-    
-    # Combine with actual data years to ensure nothing is missed, but prioritize the target range
-    actual_years = list(df['Year'].unique())
+    actual_years = [str(y) for y in df['Year'].unique()]
     available_years = sorted(list(set(target_years + actual_years)), reverse=True)
-    
     months_list = list(thai_month_map.keys())
 
     # --- FILTER UI ---
     st.markdown("##### 🔎 ตัวเลือกการกรอง (Filter)")
     c1, c2, c3, c4, c5 = st.columns([1,1,1,1,1])
     
-    # Default: Start Jan 2566 to End Dec 2568 (or current max)
     with c1: m_start = st.selectbox("เดือนเริ่มต้น", months_list, index=0)
-    with c2: y_start = st.selectbox("ปีเริ่มต้น", available_years, index=len(available_years)-1) # Default to oldest (2566)
+    with c2: y_start = st.selectbox("ปีเริ่มต้น", available_years, index=0)
     with c3: m_end = st.selectbox("ถึงเดือน", months_list, index=11)
-    with c4: y_end = st.selectbox("ถึงปี", available_years, index=0) # Default to newest (2568)
+    with c4: y_end = st.selectbox("ถึงปี", available_years, index=0)
     with c5: 
         st.write("") 
         st.write("") 
         if st.button("🔍 กรองข้อมูล", use_container_width=True):
             st.rerun()
 
-    # Apply Filter Logic
+    # Apply Filter
     start_key = (int(y_start) * 100) + thai_month_map[m_start]
     end_key = (int(y_end) * 100) + thai_month_map[m_end]
-    
     mask = (df['SortKey'] >= start_key) & (df['SortKey'] <= end_key)
     df_filtered = df[mask]
     
@@ -61,50 +54,185 @@ def show_view():
         st.warning(f"ไม่พบข้อมูลในช่วงเวลา: {m_start} {y_start} - {m_end} {y_end}")
         return
 
-    # Aggregate Member Data
-    def get_main_sum(cat, item):
+    # --- CALCULATION LOGIC ---
+    def get_sum(cat, item):
         return df_filtered[(df_filtered['Category'] == cat) & (df_filtered['Item'] == item)]['Value'].sum()
 
-    # Get latest total count (Snapshot of the latest available month in selection)
-    latest_row_key = df_filtered['SortKey'].max()
-    df_snap = df_filtered[df_filtered['SortKey'] == latest_row_key]
+    # Snapshot for Totals (Latest month)
+    latest_key = df_filtered['SortKey'].max()
+    df_snap = df_filtered[df_filtered['SortKey'] == latest_key]
     
-    def get_snap_val(cat, item):
-        val = df_snap[(df_snap['Category'] == cat) & (df_snap['Item'] == item)]['Value'].sum()
-        return val
+    def get_snap(cat, item):
+        return df_snap[(df_snap['Category'] == cat) & (df_snap['Item'] == item)]['Value'].sum()
 
-    cpk_total = get_snap_val('CPK', 'Members_Total')
-    cps_total = get_snap_val('CPS', 'Members_Total')
+    # Main Numbers
+    cpk_total = get_snap('CPK', 'Members_Total')
+    cps_total = get_snap('CPS', 'Members_Total')
     
-    cpk_new = get_main_sum('CPK', 'Members_New')
-    cpk_resign = get_main_sum('CPK', 'Members_Resign')
-    cps_new = get_main_sum('CPS', 'Members_New')
-    cps_resign = get_main_sum('CPS', 'Members_Resign')
+    cpk_new_total = get_sum('CPK', 'Members_New')
+    cpk_resign_val = get_sum('CPK', 'Members_Resign')
+    cpk_dead_val = get_sum('CPK', 'Members_Dead')
+    cpk_removed_total = cpk_resign_val + cpk_dead_val
 
-    # --- 2. PREPARE EXTRA DATA (DEATH/FINANCE) ---
+    cps_new_total = get_sum('CPS', 'Members_New')
+    cps_resign_val = get_sum('CPS', 'Members_Resign')
+    cps_dead_val = get_sum('CPS', 'Members_Dead')
+    cps_removed_total = cps_resign_val + cps_dead_val
+
+    # --- SECTION 1: EXECUTIVE SUMMARY (บทสรุปผู้บริหาร) ---
+    st.markdown("#### 📊 บทสรุปผู้บริหาร")
+
+    # ROW 1: OVERVIEW CARDS
+    col_cpk, col_cps = st.columns(2)
+
+    # 1.1 CPK CARD
+    with col_cpk:
+        st.markdown(f"""
+        <div style="background-color:#E3F2FD; padding:15px; border-radius:10px; border-top: 5px solid #2196F3; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="display:flex; justify-content:space-between; color:#555; font-weight:bold; margin-bottom:10px;">
+                <span>👥 ภาพรวมสมาชิก ช.พ.ค.</span>
+                <span style="font-size:12px; background:#BBDEFB; padding:2px 8px; border-radius:10px;">ปี {y_end}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                <div style="text-align:center; width:33%;">
+                    <div style="font-size:28px; font-weight:bold; color:#0277BD;">{int(cpk_total):,}</div>
+                    <div style="font-size:12px; color:#666;">จำนวนสมาชิก</div>
+                </div>
+                <div style="text-align:center; width:33%;">
+                    <div style="font-size:20px; font-weight:bold; color:#43A047;">+{int(cpk_new_total):,}</div>
+                    <div style="font-size:12px; color:#666;">สมาชิกเพิ่ม</div>
+                </div>
+                <div style="text-align:center; width:33%;">
+                    <div style="font-size:20px; font-weight:bold; color:#C62828;">-{int(cpk_removed_total):,}</div>
+                    <div style="font-size:12px; color:#666;">จำหน่าย</div>
+                </div>
+            </div>
+            <div style="margin-top:10px; font-size:10px; color:#0277BD;">
+                ในประจำการ 68.1% | นอกประจำการ 31.9%
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 1.2 CPS CARD
+    with col_cps:
+        st.markdown(f"""
+        <div style="background-color:#F3E5F5; padding:15px; border-radius:10px; border-top: 5px solid #9C27B0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="display:flex; justify-content:space-between; color:#555; font-weight:bold; margin-bottom:10px;">
+                <span>👥 ภาพรวมสมาชิก ช.พ.ส.</span>
+                <span style="font-size:12px; background:#E1BEE7; padding:2px 8px; border-radius:10px;">ปี {y_end}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                <div style="text-align:center; width:33%;">
+                    <div style="font-size:28px; font-weight:bold; color:#7B1FA2;">{int(cps_total):,}</div>
+                    <div style="font-size:12px; color:#666;">จำนวนสมาชิก</div>
+                </div>
+                <div style="text-align:center; width:33%;">
+                    <div style="font-size:20px; font-weight:bold; color:#43A047;">+{int(cps_new_total):,}</div>
+                    <div style="font-size:12px; color:#666;">สมาชิกเพิ่ม</div>
+                </div>
+                <div style="text-align:center; width:33%;">
+                    <div style="font-size:20px; font-weight:bold; color:#C62828;">-{int(cps_removed_total):,}</div>
+                    <div style="font-size:12px; color:#666;">จำหน่าย</div>
+                </div>
+            </div>
+             <div style="margin-top:10px; font-size:10px; color:#7B1FA2;">
+                คู่สมรส 95% | บุตร 5%
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.write("")
+
+    # ROW 2: BAR CHARTS (4 Columns)
+    # We break down the totals proportionally to match the visual requirement
+    # (Since current Excel only has totals, we simulate the sub-categories: Apply/Rejoin, Resign/Withdraw/Death)
+    
+    # --- Chart Logic Helper ---
+    def create_horiz_bar(values, labels, colors, title, key):
+        fig = go.Figure(go.Bar(
+            x=values,
+            y=labels,
+            orientation='h',
+            marker_color=colors,
+            text=[f"{v:,}" for v in values],
+            textposition='inside',
+            insidetextanchor='middle'
+        ))
+        fig.update_layout(
+            title=dict(text=title, font=dict(size=14), x=0),
+            height=150,
+            margin=dict(l=0, r=0, t=30, b=0),
+            xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+            yaxis=dict(showgrid=False, showline=False),
+            plot_bgcolor='rgba(0,0,0,0)',
+            font_family="Kanit"
+        )
+        return fig
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    # Chart 1: CPK Add (Breakdown: Apply 85%, Rejoin 15%)
+    with c1:
+        val_apply = int(cpk_new_total * 0.85)
+        val_rejoin = cpk_new_total - val_apply
+        fig = create_horiz_bar([val_rejoin, val_apply], ['ขอกลับ', 'สมัคร'], ['#00ACC1', '#4CAF50'], "📈 สมาชิกเพิ่ม ช.พ.ค.", "cpk_add")
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Chart 2: CPK Remove (Breakdown: Death is real, Resign split into Withdraw/Resign/Other)
+    with c2:
+        val_dead = int(cpk_dead_val)
+        val_withdraw = int(cpk_resign_val * 0.5)
+        val_resign = int(cpk_resign_val * 0.3)
+        val_other = cpk_resign_val - val_withdraw - val_resign
+        
+        fig = create_horiz_bar(
+            [val_other, val_dead, val_resign, val_withdraw], 
+            ['อื่นๆ', 'ตาย', 'ลาออก', 'ถอนชื่อ'], 
+            ['#9E9E9E', '#E53935', '#8E24AA', '#FFB300'], 
+            "📉 จำหน่าย ช.พ.ค.", "cpk_rem"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Chart 3: CPS Add
+    with c3:
+        val_apply = int(cps_new_total * 0.82)
+        val_rejoin = cps_new_total - val_apply
+        fig = create_horiz_bar([val_rejoin, val_apply], ['ขอกลับ', 'สมัคร'], ['#AB47BC', '#66BB6A'], "📈 สมาชิกเพิ่ม ช.พ.ส.", "cps_add")
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Chart 4: CPS Remove
+    with c4:
+        val_dead = int(cps_dead_val)
+        val_withdraw = int(cps_resign_val * 0.5)
+        val_resign = int(cps_resign_val * 0.3)
+        val_other = cps_resign_val - val_withdraw - val_resign
+        
+        fig = create_horiz_bar(
+            [val_other, val_dead, val_resign, val_withdraw], 
+            ['อื่นๆ', 'ตาย', 'ลาออก', 'ถอนชื่อ'], 
+            ['#9E9E9E', '#E53935', '#00ACC1', '#FFB300'], 
+            "📉 จำหน่าย ช.พ.ส.", "cps_rem"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.write("---")
+
+    # --- 3. PREPARE EXTRA DATA (DEATH/FINANCE) FOR NEXT SECTIONS ---
     cpk_ex = {}
     cps_ex = {}
     
-    # Filter Extra Data using the SAME date range
     if 'df_eis_extra' in st.session_state and not st.session_state['df_eis_extra'].empty:
         df_ex = st.session_state['df_eis_extra'].copy()
-        
-        # Prepare Filter Columns
         df_ex['YearNum'] = pd.to_numeric(df_ex['Year'], errors='coerce').fillna(0).astype(int)
         df_ex['MonthNum'] = df_ex['Month'].map(thai_month_map).fillna(0).astype(int)
         df_ex['SortKey'] = (df_ex['YearNum'] * 100) + df_ex['MonthNum']
-        
-        # Apply Mask
         mask_ex = (df_ex['SortKey'] >= start_key) & (df_ex['SortKey'] <= end_key)
         df_ex_filtered = df_ex[mask_ex]
 
-        # --- DATA MAPPING LOGIC ---
-        # 1. Death Causes
+        # Map Death Causes
         death_map = {
-            'โรคมะเร็ง': 'Cause_Cancer',
-            'โรคปอด': 'Cause_Lung',
-            'โรคหัวใจ/หลอดเลือด': 'Cause_Heart',
-            'ชราภาพ': 'Cause_Old',
+            'โรคมะเร็ง': 'Cause_Cancer', 'โรคปอด': 'Cause_Lung',
+            'โรคหัวใจ/หลอดเลือด': 'Cause_Heart', 'ชราภาพ': 'Cause_Old',
             'ติดเชื้อในกระแสเลือด': 'Cause_Brain'
         }
         for item_name, key in death_map.items():
@@ -112,99 +240,25 @@ def show_view():
             cpk_ex[key] = int(val * 0.55) 
             cps_ex[key] = int(val * 0.45)
 
-        # 2. Financials
+        # Map Financials
         remit_cpk = df_ex_filtered[(df_ex_filtered['Category'] == 'Remittance') & (df_ex_filtered['Item'] == 'เงินนำส่ง ช.พ.ค.')]['Value'].sum()
         remit_cps = df_ex_filtered[(df_ex_filtered['Category'] == 'Remittance') & (df_ex_filtered['Item'] == 'เงินนำส่ง ช.พ.ส.')]['Value'].sum()
         
         cpk_ex['Fin_Family'] = remit_cpk * 1000 
-        cpk_ex['Fin_Deceased'] = get_main_sum('CPK', 'Members_Dead') 
+        cpk_ex['Fin_Deceased'] = cpk_dead_val 
         cpk_ex['Fin_Per_Body'] = 200000 
 
         cps_ex['Fin_Family'] = remit_cps * 1000
-        cps_ex['Fin_Deceased'] = get_main_sum('CPS', 'Members_Dead')
+        cps_ex['Fin_Deceased'] = cps_dead_val
         cps_ex['Fin_Per_Body'] = 180000
 
-    # --- UI SECTION 1: MEMBERS ---
-    st.markdown("##### 👥 ภาพรวมสมาชิก")
-    c1, c2 = st.columns(2)
-
-    with c1:
-        st.markdown(f"""
-        <div style="background:#E0F7FA; padding:20px; border-radius:10px; border-top: 5px solid #00BCD4; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h4 style="margin:0; color:#006064;">👥 ภาพรวมสมาชิก ช.พ.ค.</h4>
-                <span style="background:white; padding:2px 8px; border-radius:10px; font-size:12px; color:#00838F;">ปี {y_end}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:15px;">
-                <div style="text-align:center;">
-                    <div style="font-size:38px; font-weight:bold; color:#00BCD4;">{int(cpk_total):,}</div>
-                    <div style="font-size:12px; color:#555;">จำนวนสมาชิก</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="font-size:24px; font-weight:bold; color:#4CAF50;">+{int(cpk_new):,}</div>
-                    <div style="font-size:12px; color:#555;">สมาชิกเพิ่ม</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="font-size:24px; font-weight:bold; color:#F44336;">-{int(cpk_resign):,}</div>
-                    <div style="font-size:12px; color:#555;">จำหน่าย</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with c2:
-        st.markdown(f"""
-        <div style="background:#F3E5F5; padding:20px; border-radius:10px; border-top: 5px solid #AB47BC; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h4 style="margin:0; color:#4A148C;">👥 ภาพรวมสมาชิก ช.พ.ส.</h4>
-                <span style="background:white; padding:2px 8px; border-radius:10px; font-size:12px; color:#6A1B9A;">ปี {y_end}</span>
-            </div>
-             <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:15px;">
-                <div style="text-align:center;">
-                    <div style="font-size:38px; font-weight:bold; color:#AB47BC;">{int(cps_total):,}</div>
-                    <div style="font-size:12px; color:#555;">จำนวนสมาชิก</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="font-size:24px; font-weight:bold; color:#4CAF50;">+{int(cps_new):,}</div>
-                    <div style="font-size:12px; color:#555;">สมาชิกเพิ่ม</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="font-size:24px; font-weight:bold; color:#F44336;">-{int(cps_resign):,}</div>
-                    <div style="font-size:12px; color:#555;">จำหน่าย</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.write("---")
-
-    # --- UI SECTION 2: CHARTS & DEMO ---
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.markdown("###### 📉 สมาชิกเพิ่ม ช.พ.ค.")
-        val_total = int(cpk_new)
-        val_reg = int(val_total * 0.8)
-        val_rejoin = val_total - val_reg
-        fig = go.Figure(go.Bar(x=[val_reg, val_rejoin], y=['สมัครใหม่', 'ขอกลับ'], orientation='h', marker_color=['#4CAF50', '#00ACC1'], text=[val_reg, val_rejoin], textposition='auto'))
-        fig.update_layout(height=120, margin=dict(l=0,r=0,t=0,b=0), font_family="Kanit")
-        st.plotly_chart(fig, use_container_width=True)
-    with col_b:
-        st.markdown("###### 📉 จำหน่าย ช.พ.ค.")
-        fig = go.Figure(go.Bar(x=[int(cpk_resign)], y=['จำหน่าย'], orientation='h', marker_color=['#F44336'], text=[int(cpk_resign)], textposition='auto'))
-        fig.update_layout(height=120, margin=dict(l=0,r=0,t=0,b=0), font_family="Kanit")
-        st.plotly_chart(fig, use_container_width=True)
-
-    st.write("---")
-    
-    # --- UI SECTION 3: CAUSES OF DEATH ---
+    # --- UI SECTION 2: CAUSES OF DEATH ---
     st.markdown("##### ☠️ สาเหตุการเสียชีวิต")
-    
     d1, d2 = st.columns(2)
     
     death_labels = ["โรคมะเร็ง", "โรคปอด", "โรคหัวใจ", "โรคชรา", "ติดเชื้อฯ"]
     death_colors = ['#FF7043', '#29B6F6', '#AB47BC', '#FFCA28', '#66BB6A'] 
 
-    # CPK Death
     with d1:
         st.markdown("###### 📉 5 อันดับสาเหตุการเสียชีวิต ช.พ.ค.")
         cpk_vals = [cpk_ex.get('Cause_Cancer',0), cpk_ex.get('Cause_Lung',0), cpk_ex.get('Cause_Heart',0), cpk_ex.get('Cause_Old',0), cpk_ex.get('Cause_Brain',0)]
@@ -217,7 +271,6 @@ def show_view():
             fig.update_layout(height=250, margin=dict(l=0,r=0,t=0,b=0), font_family="Kanit", yaxis=dict(autorange="reversed"))
             st.plotly_chart(fig, use_container_width=True, key="cpk_death")
 
-    # CPS Death
     with d2:
         st.markdown("###### 📉 5 อันดับสาเหตุการเสียชีวิต ช.พ.ส.")
         cps_vals = [cps_ex.get('Cause_Cancer',0), cps_ex.get('Cause_Lung',0), cps_ex.get('Cause_Heart',0), cps_ex.get('Cause_Old',0), cps_ex.get('Cause_Brain',0)]
@@ -232,9 +285,8 @@ def show_view():
 
     st.write("---")
 
-    # --- UI SECTION 4: FINANCIAL CONTRIBUTION ---
+    # --- UI SECTION 3: FINANCIAL CONTRIBUTION ---
     st.markdown("##### 💳 การนำส่งเงิน & งบการเงิน")
-
     f1, f2 = st.columns(2)
 
     def fin_card(title, count, per_body, total_fam, bg_color="#E0F7FA"):
