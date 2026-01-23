@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from utils.styles import render_header
 
 def show_view():
-    render_header("📦 กองคลัง-พัสดุ (Procurement)", border_color="#795548")
+    render_header("สำนักการคลัง - กลุ่มการพัสดุและอาคารสถานที่", border_color="#795548")
     
     # 1. READ DATA FROM SESSION STATE
     if 'df_procure' not in st.session_state or st.session_state['df_procure'].empty:
